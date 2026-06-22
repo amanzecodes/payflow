@@ -12,6 +12,10 @@ const rows = [
     detail: "See who's paid, who's owing, updated the moment money lands",
   },
   {
+  title: "Works your way — transfer or auto-pay",
+  detail: "Pay manually whenever you want, or set up automatic recurring charges",
+},
+  {
     title: "No screenshots or follow-up messages",
     detail: "No more chasing 'abeg confirm you don pay'",
   },
