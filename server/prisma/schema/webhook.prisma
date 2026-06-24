@@ -1,0 +1,13 @@
+model WebhookEvent {
+  id            String    @id @default(cuid())
+  eventType     String
+  accountRef    String?
+  txRef         String?
+  amount        Float?
+  payload       Json
+  processed     Boolean   @default(false)
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@map("webhook_events")
+}

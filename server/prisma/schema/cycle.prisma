@@ -1,0 +1,13 @@
+model Cycle {
+  id            String      @id @default(cuid())
+  collectionId  String
+  period        String
+  dueDate       DateTime
+  openedAt      DateTime    @default(now())
+
+  collection    Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  charges       Charge[]
+
+  @@unique([collectionId, period])
+  @@map("cycles")
+}

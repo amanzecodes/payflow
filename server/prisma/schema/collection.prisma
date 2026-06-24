@@ -1,0 +1,29 @@
+model Collection {
+  id          String          @id @default(cuid())
+  orgId       String
+  name        String
+  amount      Float?
+  cycle       CycleFrequency
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  org         Organisation    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  feeLines    FeeLine[]
+  cycles      Cycle[]
+
+  @@map("collections")
+}
+
+model FeeLine {
+  id            String    @id @default(cuid())
+  collectionId  String
+  name          String
+  amount        Float
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  collection    Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  enrollments   FeeEnrollment[]
+
+  @@map("fee_lines")
+}

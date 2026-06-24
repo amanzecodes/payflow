@@ -1,0 +1,14 @@
+model ConversationSession {
+  id          String            @id @default(cuid())
+  phone       String            @unique
+  role        ConversationRole  @default(NEW)
+  step        ConversationStep  @default(AWAITING_ORG_NAME)
+  orgId       String?
+  context     Json              @default("{}")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  org         Organisation?     @relation(fields: [orgId], references: [id])
+
+  @@map("conversation_sessions")
+}

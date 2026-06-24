@@ -1,0 +1,23 @@
+model Organisation {
+  id                  String              @id @default(cuid())
+  name                String
+  type                OrgType
+  slug                String              @unique
+  adminWhatsapp       String              @unique
+  adminEmail          String?
+  payoutBankAccount   String
+  payoutBankCode      String
+  payoutAccountName   String
+  payoutBankName      String
+  structure           CollectionStructure @default(FLAT)
+  inviteCode          String?             @unique
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  collections         Collection[]
+  members             Member[]
+  payouts             Payout[]
+  sessions            ConversationSession[]
+
+  @@map("organisations")
+}

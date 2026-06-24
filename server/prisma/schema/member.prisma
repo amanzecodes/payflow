@@ -1,0 +1,34 @@
+model Member {
+  id              String        @id @default(cuid())
+  orgId           String
+  name            String
+  identifier      String
+  phone           String?
+  vaNumber        String        @unique
+  vaBankName      String
+  accountRef      String        @unique
+  expectedAmount  Float
+  status          MemberStatus  @default(ACTIVE)
+  accountSent     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  org             Organisation    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  enrollments     FeeEnrollment[]
+  charges         Charge[]
+
+  @@map("members")
+}
+
+model FeeEnrollment {
+  id          String    @id @default(cuid())
+  memberId    String
+  feeLineId   String
+  createdAt   DateTime  @default(now())
+
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  feeLine     FeeLine   @relation(fields: [feeLineId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, feeLineId])
+  @@map("fee_enrollments")
+}
