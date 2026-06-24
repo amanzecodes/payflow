@@ -137,6 +137,21 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+
+.font-manrope-scope {
+  
+  --font-sans: var(--font-manrope, var(--font-sans));
+  
+  font-family: var(--font-manrope, var(--font-sans));
+}
+
+.font-manrope-scope .font-sans {
+  font-family: var(--font-manrope) !important;
+}
+.font-manrope-scope .font-heading {
+  font-family: var(--font-manrope) !important;
+}
+
 body {
   font-family: var(--font-sans);
 }
