@@ -4,15 +4,11 @@
     "module": "node16",
     "moduleResolution": "node16",
     "lib": ["ES2022"],
-    "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
+    "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src", "prisma.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["prisma.config.ts"]
 }
