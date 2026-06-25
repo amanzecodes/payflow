@@ -15,3 +15,14 @@ export interface OrgBalance {
   totalPayouts: number
   available: number
 }
+
+export interface JwtPayload {
+  adminId: string
+  email: string
+  phone: string
+}
+
+export interface AuthTokens {
+  accessToken: string
+  refreshToken: string
+}
