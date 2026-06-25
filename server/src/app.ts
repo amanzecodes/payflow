@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import { requestLogger } from "./middleware/logger.middleware";
 import { errorMiddleware } from './middleware/error.middleware'
 import cookieParser from 'cookie-parser'
+import { router } from "./routes";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use('/api/v1', router)
 app.use(errorMiddleware)
 
 export default app;
