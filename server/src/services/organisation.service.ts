@@ -1,4 +1,4 @@
-import { Organisation } from '../generated/prisma/client'
+import { Organisation, OrgType, CollectionStructure } from '../generated/prisma/client'
 import { OrganisationRepository } from '../repositories/organisation.repository'
 import { ChargeRepository } from '../repositories/charge.repository'
 import { PayoutRepository } from '../repositories/payout.repository'
@@ -14,7 +14,7 @@ export class OrganisationService {
 
   async create(data: {
     name: string
-    type: string
+    type: OrgType
     adminId: string
     adminWhatsapp: string
     adminEmail?: string
@@ -22,7 +22,7 @@ export class OrganisationService {
     payoutBankCode: string
     payoutAccountName: string
     payoutBankName: string
-    structure: string
+    structure: CollectionStructure
   }): Promise<Organisation> {
     const slug = data.name
       .toLowerCase()
@@ -38,7 +38,7 @@ export class OrganisationService {
 
     return this.orgRepo.create({
       name: data.name,
-      type: data.type as any,
+      type: data.type,
       slug,
       adminWhatsapp: data.adminWhatsapp,
       adminEmail: data.adminEmail,
@@ -46,7 +46,7 @@ export class OrganisationService {
       payoutBankCode: data.payoutBankCode,
       payoutAccountName: data.payoutAccountName,
       payoutBankName: data.payoutBankName,
-      structure: data.structure as any,
+      structure: data.structure,
       inviteCode,
       admin: { connect: { id: data.adminId } }
     })
