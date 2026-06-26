@@ -18,6 +18,13 @@ export class OrganisationRepository {
     return prisma.organisation.findUnique({ where: { inviteCode } })
   }
 
+  async findAllByAdmin(adminId: string): Promise<Organisation[]> {
+    return prisma.organisation.findMany({
+      where: { adminId },
+      orderBy: { createdAt: 'desc' }
+    })
+  }
+
   async create(data: Prisma.OrganisationCreateInput): Promise<Organisation> {
     return prisma.organisation.create({ data })
   }
