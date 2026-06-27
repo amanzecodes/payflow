@@ -3,7 +3,7 @@ model Organisation {
   name                String
   type                OrgType
   slug                String              @unique
-  adminId             String
+  adminId             String?
   adminWhatsapp       String              @unique
   adminEmail          String?
   payoutBankAccount   String
@@ -15,7 +15,7 @@ model Organisation {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
-  admin               Admin               @relation(fields: [adminId], references: [id])
+  admin               Admin?               @relation(fields: [adminId], references: [id])
   collections         Collection[]
   members             Member[]
   payouts             Payout[]

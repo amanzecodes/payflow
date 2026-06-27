@@ -10,6 +10,7 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),
+  WEBHOOK_BASE_URL: z.string()
 })
 
 const parsed = envSchema.safeParse(process.env)

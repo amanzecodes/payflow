@@ -6,7 +6,7 @@ export class SessionRepository {
     return prisma.conversationSession.findUnique({ where: { phone } })
   }
 
-  async upsert(phone: string, data: Partial<Prisma.ConversationSessionCreateInput>): Promise<ConversationSession> {
+  async upsert(phone: string, data: Partial<Prisma.ConversationSessionUncheckedCreateInput>): Promise<ConversationSession> {
     return prisma.conversationSession.upsert({
       where: { phone },
       update: { ...data, updatedAt: new Date() },
