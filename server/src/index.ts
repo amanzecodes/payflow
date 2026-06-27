@@ -5,6 +5,8 @@ import app from './app'
 import { prisma } from './lib/prisma'
 import { env } from './config/env'
 import { logger } from './lib/logger'
+import { startOverdueJob } from './jobs/overdue.job'
+import { startCycleJob } from './jobs/cycle.job'
 
 const httpServer = http.createServer(app)
 
@@ -22,6 +24,9 @@ httpServer.listen(env.PORT, async () => {
   logger.info(`PayFlow API running on port ${env.PORT}`)
   await prisma.$connect()
   logger.info('Database connected')
+
+  await startOverdueJob()
+  await startCycleJob()
 })
 
 process.on('SIGINT', async () => {

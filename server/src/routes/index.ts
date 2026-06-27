@@ -5,6 +5,7 @@ import memberRoutes from './member.route'
 import payoutRoutes from './payout.route'
 import webhookRoutes from './webhook.routes'
 import dashboardRoutes from './dashboard.route'
+import collectionRoutes from './collection.route'
 
 const router = Router()
 
@@ -14,5 +15,6 @@ router.use('/organisations/:orgId/members', memberRoutes)
 router.use('/organisations/:orgId/payouts', payoutRoutes)
 router.use('/webhooks', webhookRoutes)
 router.use('/dashboard', dashboardRoutes)
+router.use('/organisations/:orgId/collections', collectionRoutes)
 
 export { router }
