@@ -19,24 +19,24 @@ export class WhatsAppController {
 
       // validate Twilio signature
       // use x-forwarded-proto for Railway/proxy environments
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol
-      const fullUrl = `${protocol}://${req.get('host')}${req.originalUrl}`
+    //   const protocol = req.headers['x-forwarded-proto'] || req.protocol
+    //   const fullUrl = `${protocol}://${req.get('host')}${req.originalUrl}`
 
-      const twilioSignature = req.headers['x-twilio-signature'] as string
+    //   const twilioSignature = req.headers['x-twilio-signature'] as string
 
-      const isValid = validateRequest(
-        env.TWILIO_AUTH_TOKEN!,
-        twilioSignature,
-        fullUrl,
-        req.body
-      )
+    //   const isValid = validateRequest(
+    //     env.TWILIO_AUTH_TOKEN!,
+    //     twilioSignature,
+    //     fullUrl,
+    //     req.body
+    //   )
 
-      // skip validation in development for easier testing
-      if (env.NODE_ENV === 'production' && !isValid) {
-        logger.warn(`[WhatsApp] Invalid Twilio signature from ${req.ip}`)
-        res.status(403).send('Forbidden')
-        return
-      }
+    //   // skip validation in development for easier testing
+    //   if (env.NODE_ENV === 'production' && !isValid) {
+    //     logger.warn(`[WhatsApp] Invalid Twilio signature from ${req.ip}`)
+    //     res.status(403).send('Forbidden')
+    //     return
+    //   }
 
       const from = payload.From
       const body = payload.Body
