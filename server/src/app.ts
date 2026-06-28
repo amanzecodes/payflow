@@ -8,7 +8,10 @@ import { router } from "./routes";
 
 const app = express();
 
-// RAW TEST ROUTE — add this before everything
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+
+
 app.post('/test-webhook', (req, res) => {
   console.log('RAW BODY:', req.body)
   console.log('HEADERS:', req.headers)
@@ -20,8 +23,6 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true 
 }))
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 app.use(requestLogger)
 
