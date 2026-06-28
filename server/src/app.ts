@@ -8,6 +8,13 @@ import { router } from "./routes";
 
 const app = express();
 
+// RAW TEST ROUTE — add this before everything
+app.post('/test-webhook', (req, res) => {
+  console.log('RAW BODY:', req.body)
+  console.log('HEADERS:', req.headers)
+  res.send('ok')
+})
+
 app.use(helmet())
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
