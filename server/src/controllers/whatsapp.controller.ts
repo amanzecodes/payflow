@@ -11,7 +11,11 @@ const whatsappService = new WhatsAppService()
 export class WhatsAppController {
   async handleIncoming(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+
+     logger.info(`[WhatsApp] Body received: ${JSON.stringify(req.body)}`)
       const payload = req.body as TwilioWebhookPayload
+
+    
 
       // validate Twilio signature
       // use x-forwarded-proto for Railway/proxy environments
@@ -36,8 +40,9 @@ export class WhatsAppController {
 
       const from = payload.From
       const body = payload.Body
-
+      logger.info(`[WhatsApp] From: ${from}, Body: ${body}`)
       if (!from || !body) {
+        logger.warn('[WhatsApp] Missing From or Body — sending empty TwiML')
         // acknowledge empty messages silently
         res.type('text/xml').send(emptyTwimlResponse())
         return
@@ -46,9 +51,12 @@ export class WhatsAppController {
       // respond immediately — process is async
       // but since we need to send TwiML back we process synchronously
       // Twilio requires response within 15 seconds
+      logger.info('[WhatsApp] Calling whatsappService.handleIncomingMessage...')
       const twimlReply = await whatsappService.handleIncomingMessage(from, body)
+      logger.info(`[WhatsApp] Reply generated: ${twimlReply}`)
 
       res.type('text/xml').send(twimlReply)
+      logger.info('[WhatsApp] Response sent successfully')
 
     } catch (error) {
       logger.error(`[WhatsApp] Controller error: ${error}`)
