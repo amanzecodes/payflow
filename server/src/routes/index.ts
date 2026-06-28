@@ -6,7 +6,7 @@ import payoutRoutes from './payout.route'
 import webhookRoutes from './webhook.routes'
 import dashboardRoutes from './dashboard.route'
 import collectionRoutes from './collection.route'
-import whatsappRoutes from './auth.routes'
+import whatsappRoutes from './whatsapp.route'
 
 const router = Router()
 
