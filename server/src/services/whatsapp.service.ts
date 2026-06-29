@@ -360,6 +360,47 @@ export class WhatsAppService {
           );
         }
 
+        await this.sessionRepo.updateStep(
+          phone,
+          ConversationStep.AWAITING_WEB_EMAIL,
+          context,
+        );
+
+        return twimlResponse(
+          `✅ Payout account confirmed.\n\n━━━━━━━━━━━━━━━\nOne last step — set up your web account so you can manage everything from your browser too.\n\nWhat email address should we use for your PayFlow account?`,
+        );
+      }
+
+      case ConversationStep.AWAITING_WEB_EMAIL: {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(message)) {
+          return twimlResponse(
+            `Please enter a valid email address.\nExample: john@gmail.com`,
+          );
+        }
+        await this.sessionRepo.updateStep(
+          phone,
+          ConversationStep.AWAITING_WEB_EMAIL_CONFIRM,
+          { ...context, webEmail: message.toLowerCase() },
+        );
+
+        return twimlResponse(
+          `Confirming your web account email:\n\n📧  *${message.toLowerCase()}*\n\nReply *YES* to confirm or send your email again to correct it.`,
+        );
+      }
+
+      case ConversationStep.AWAITING_WEB_EMAIL_CONFIRM: {
+        if (message.toLowerCase() !== "yes") {
+          await this.sessionRepo.updateStep(
+            phone,
+            ConversationStep.AWAITING_WEB_EMAIL,
+            context,
+          );
+          return twimlResponse(
+            `No problem. Please send your email address again.`,
+          );
+        }
+
         return await this.completeOnboarding(phone, context);
       }
 
@@ -372,94 +413,119 @@ export class WhatsAppService {
 
   // ─── COMPLETE ONBOARDING ──────────────────────────────────────────────────
 
-  private async completeOnboarding(
-    phone: string,
-    context: ConversationContext,
-  ): Promise<string> {
-    try {
-      const slug = (context.orgName || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
+private async completeOnboarding(
+  phone: string,
+  context: ConversationContext
+): Promise<string> {
+  try {
+    const slug = (context.orgName || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
 
-      const existingOrg = await this.orgRepo.findBySlug(slug);
-      if (existingOrg) {
-        await this.sessionRepo.delete(phone);
-        return twimlResponse(
-          `An organisation with this name already exists.\n\nPlease type *restart* and use a different name.`,
-        );
-      }
+    const existingOrg = await this.orgRepo.findBySlug(slug)
+    if (existingOrg) {
+      await this.sessionRepo.delete(phone)
+      return twimlResponse(
+        `An organisation with this name already exists.\n\nPlease type *restart* and use a different name.`
+      )
+    }
 
-      const org = await prisma.organisation.create({
+    // hash the default password
+    //please not this is just for demo purposes only meant for the Nomba x DevCareer hackathon
+    const bcrypt = await import('bcryptjs')
+    const hashedPassword = await bcrypt.hash('password', 12)
+
+    // create admin web account and organisation in one transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // create admin web account
+      const admin = await tx.admin.create({
+        data: {
+          name: context.orgName!,
+          email: context.webEmail!,
+          password: hashedPassword,
+          phone,
+        }
+      })
+
+      // create organisation linked to admin
+      const org = await tx.organisation.create({
         data: {
           name: context.orgName!,
           type: context.orgType as any,
           slug,
           adminWhatsapp: phone,
-          adminId: null,
+          adminId: admin.id,  // ← linked
+          adminEmail: context.webEmail,
           payoutBankAccount: context.payoutBankAccount!,
           payoutBankCode: context.payoutBankCode!,
           payoutAccountName: context.payoutAccountName!,
           payoutBankName: context.payoutBankName!,
           structure: context.structure as any,
           inviteCode:
-            context.structure === "VARIABLE"
+            context.structure === 'VARIABLE'
               ? `JOIN-${slug}-${Date.now().toString(36)}`
               : null,
-        },
-      });
+        }
+      })
 
-      await this.collectionService.create({
-        orgId: org.id,
-        name: context.collectionName!,
-        amount: context.structure === "FLAT" ? context.flatAmount : undefined,
-        cycle: context.cycle!,
-      });
+      return { admin, org }
+    })
 
-      if (context.structure === "VARIABLE" && context.feeLines?.length) {
-        const collection = await this.collectionRepo.findAllByOrg(org.id);
-        await prisma.feeLine.createMany({
-          data: context.feeLines.map((f) => ({
-            collectionId: collection[0].id,
-            name: f.name,
-            amount: f.amount,
-            isActive: true,
-          })),
-        });
-      }
+    const { admin, org } = result
 
-      // set session to AWAITING_MEMBERS so done and member names are handled correctly
-      await this.sessionRepo.upsert(phone, {
-        role: ConversationRole.ADMIN,
-        step: ConversationStep.AWAITING_MEMBERS,
-        orgId: org.id,
-        context: {},
-      });
+    // create collection
+    await this.collectionService.create({
+      orgId: org.id,
+      name: context.collectionName!,
+      amount: context.structure === 'FLAT' ? context.flatAmount : undefined,
+      cycle: context.cycle!,
+    })
 
-      if (context.structure === "VARIABLE") {
-        return twimlResponse(
-          `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🔗 *Member join code:*\n*${org.inviteCode}*\n\nShare this code with your members. They text it to this number to register and get their own dedicated account.\n\nType *help* to see your available commands.`,
-        );
-      }
-
-      if (context.cycle === "ONE_TIME") {
-        return twimlResponse(
-          `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Type:* One-time collection\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\nNow add your members. Each one gets their own dedicated account.\n\nSend each member as:\n*Full Name, Name/ID*\n\nExample:\nEmeka, Boys\nTunde, Boys\n\nType *done* when finished.`,
-        );
-      }
-
-      return twimlResponse(
-        `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\nNow add your members. Each one gets their own dedicated account number.\n\nSend each member as:\n*Full Name, Unit/ID*\n\nExample:\nMrs Okoro, Flat 3B\nMr Bello, Flat 7A\n\nType *done* when finished.`,
-      );
-    } catch (error) {
-      logger.error(
-        `[WhatsApp] Error completing onboarding for ${phone}: ${error}`,
-      );
-      return twimlResponse(
-        `⚠️ Something went wrong setting up your account. Please type *restart* to try again.`,
-      );
+    // create fee lines if VARIABLE
+    if (context.structure === 'VARIABLE' && context.feeLines?.length) {
+      const collections = await this.collectionRepo.findAllByOrg(org.id)
+      await prisma.feeLine.createMany({
+        data: context.feeLines.map((f) => ({
+          collectionId: collections[0].id,
+          name: f.name,
+          amount: f.amount,
+          isActive: true,
+        }))
+      })
     }
+
+    // set session to AWAITING_MEMBERS
+    await this.sessionRepo.upsert(phone, {
+      role: ConversationRole.ADMIN,
+      step: ConversationStep.AWAITING_MEMBERS,
+      orgId: org.id,
+      context: {},
+    })
+
+    if (context.structure === 'VARIABLE') {
+      return twimlResponse(
+        `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Type:* ${context.cycle === 'ONE_TIME' ? 'One-time' : context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🌐  *Web dashboard:* payflow.app/dashboard/${org.slug}\n📧  *Web login:* ${context.webEmail}\n🔑  *Password:* password\n\n_Please change your password after first login._\n\n🔗 *Member join code:*\n*${org.inviteCode}*\n\nShare this code with your members. They text it to this number to register.\n\nType *help* to see your available commands.`
+      )
+    }
+
+    if (context.cycle === 'ONE_TIME') {
+      return twimlResponse(
+        `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Type:* One-time collection\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🌐  *Web dashboard:* payflow.app/dashboard/${org.slug}\n📧  *Web login:* ${context.webEmail}\n🔑  *Password:* password\n\n_Please change your password after first login._\n\nNow add your members. Send each as:\n*Full Name, Name/ID*\nType *done* when finished.`
+      )
+    }
+
+    return twimlResponse(
+      `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🌐  *Web dashboard:* payflow.app/dashboard/${org.slug}\n📧  *Web login:* ${context.webEmail}\n🔑  *Password:* password\n\n_Please change your password after first login._\n\nNow add your members. Send each as:\n*Full Name, Unit/ID*\nType *done* when finished.`
+    )
+
+  } catch (error) {
+    logger.error(`[WhatsApp] Error completing onboarding for ${phone}: ${error}`)
+    return twimlResponse(
+      `⚠️ Something went wrong setting up your account. Please type *restart* to try again.`
+    )
   }
+}
 
   // ─── ADMIN COMMANDS (post-onboarding) ─────────────────────────────────────
 

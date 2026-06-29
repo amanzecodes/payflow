@@ -28,6 +28,7 @@ export interface ConversationContext {
   pendingBankAccount?: string;
   pendingBankCode?: string;
   selectedFeeLineIds?: string[];
+  webEmail?: string
 }
 
 export type TypedSession = Omit<ConversationSession, "context"> & {
