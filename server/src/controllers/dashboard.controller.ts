@@ -8,7 +8,6 @@ export class DashboardController {
   constructor(
     private readonly orgService: OrganisationService,
     private readonly memberService: MemberService,
-    private readonly chargeRepo: ChargeRepository
   ) {}
 
   async getOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
