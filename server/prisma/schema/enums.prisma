@@ -13,6 +13,7 @@ enum CycleFrequency {
   QUARTERLY
   YEARLY
   TERMLY
+  ONE_TIME
 }
 
 enum ChargeStatus {

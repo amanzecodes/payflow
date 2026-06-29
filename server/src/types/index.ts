@@ -71,4 +71,5 @@ export const CYCLE_TYPES: Record<string, string> = {
   '2': 'QUARTERLY',
   '3': 'YEARLY',
   '4': 'TERMLY',
+  '5': 'ONE_TIME'
 }

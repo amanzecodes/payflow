@@ -30,6 +30,8 @@ export async function openCycles(): Promise<void> {
           period = format(now, 'yyyy-MM')
           dueDate = endOfMonth(now)
           break
+        case CycleFrequency.ONE_TIME:
+          continue
         case CycleFrequency.QUARTERLY:
           period = `${format(now, 'yyyy')}-Q${Math.ceil((now.getMonth() + 1) / 3)}`
           dueDate = endOfQuarter(now)

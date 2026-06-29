@@ -3,7 +3,7 @@ import { CollectionRepository } from '../repositories/collection.repository'
 import { OrganisationRepository } from '../repositories/organisation.repository'
 import { AppError } from '../middleware/error.middleware'
 import { prisma } from '../lib/prisma'
-import { format, endOfMonth, endOfQuarter, endOfYear } from 'date-fns'
+import { format, endOfMonth, endOfQuarter, endOfYear, addYears } from 'date-fns'
 
 export class CollectionService {
   constructor(
@@ -51,24 +51,46 @@ export class CollectionService {
         period = format(now, 'yyyy-MM')
         dueDate = endOfMonth(now)
         break
+
       case CycleFrequency.QUARTERLY:
         period = `${format(now, 'yyyy')}-Q${Math.ceil((now.getMonth() + 1) / 3)}`
         dueDate = endOfQuarter(now)
         break
+
       case CycleFrequency.YEARLY:
         period = format(now, 'yyyy')
         dueDate = endOfYear(now)
         break
+
       case CycleFrequency.TERMLY:
+        // termly opened manually by admin
         return
+
+      case CycleFrequency.ONE_TIME: {
+        // check if a cycle already exists — never open more than one
+        const existing = await prisma.cycle.findFirst({
+          where: { collectionId }
+        })
+        if (existing) return
+
+        // open one cycle with a far future due date — effectively never expires
+        await prisma.cycle.create({
+          data: {
+            collectionId,
+            period: 'ONE-TIME',
+            dueDate: addYears(now, 1)
+          }
+        })
+        return
+      }
+
       default:
         return
     }
 
+    // for recurring cycles — check it does not already exist
     const existing = await prisma.cycle.findUnique({
-      where: {
-        collectionId_period: { collectionId, period }
-      }
+      where: { collectionId_period: { collectionId, period } }
     })
     if (existing) return
 

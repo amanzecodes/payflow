@@ -38,22 +38,22 @@ export class WhatsAppService {
     this.memberService = new MemberService(
       this.memberRepo,
       this.orgRepo,
-      paymentProvider
+      paymentProvider,
     );
     this.payoutService = new PayoutService(
       this.payoutRepo,
       this.orgRepo,
       this.chargeRepo,
-      paymentProvider
+      paymentProvider,
     );
     this.orgService = new OrganisationService(
       this.orgRepo,
       this.chargeRepo,
-      this.payoutRepo
+      this.payoutRepo,
     );
     this.collectionService = new CollectionService(
       this.collectionRepo,
-      this.orgRepo
+      this.orgRepo,
     );
   }
 
@@ -84,7 +84,7 @@ export class WhatsAppService {
         return await this.handleMemberSession(
           phone,
           message,
-          session as TypedSession
+          session as TypedSession,
         );
       }
 
@@ -92,7 +92,7 @@ export class WhatsAppService {
         return await this.handleAdminOnboarding(
           phone,
           message,
-          session as TypedSession
+          session as TypedSession,
         );
       }
 
@@ -101,7 +101,7 @@ export class WhatsAppService {
     } catch (error) {
       logger.error(`[WhatsApp] Error handling message from ${phone}: ${error}`);
       return twimlResponse(
-        `⚠️ Something went wrong. Please try again.\n\nIf the problem persists, type *restart* to start over.`
+        `⚠️ Something went wrong. Please try again.\n\nIf the problem persists, type *restart* to start over.`,
       );
     }
   }
@@ -116,7 +116,7 @@ export class WhatsAppService {
     });
 
     return twimlResponse(
-      `👋 Welcome to *PayFlow*\n\nPayFlow gives every member of your group their own dedicated payment account. When they pay, it reconciles automatically — no shared accounts, no manual tracking, no guessing who paid.\n\n━━━━━━━━━━━━━━━\nLet's get you set up in 5 steps.\n\nFirst, what is the name of your estate, cooperative, gym, or group?`
+      `👋 Welcome to *PayFlow*\n\nPayFlow gives every member of your group their own dedicated payment account. When they pay, it reconciles automatically — no shared accounts, no manual tracking, no guessing who paid.\n\n━━━━━━━━━━━━━━━\nLet's get you set up in 5 steps.\n\nFirst, what is the name of your estate, cooperative, gym, or group?`,
     );
   }
 
@@ -125,7 +125,7 @@ export class WhatsAppService {
   private async handleAdminOnboarding(
     phone: string,
     message: string,
-    session: TypedSession
+    session: TypedSession,
   ): Promise<string> {
     const context: ConversationContext = session.context as ConversationContext;
 
@@ -139,18 +139,18 @@ export class WhatsAppService {
       case ConversationStep.AWAITING_ORG_NAME: {
         if (message.length < 2) {
           return twimlResponse(
-            `Please enter a valid name (at least 2 characters).`
+            `Please enter a valid name (at least 2 characters).`,
           );
         }
 
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_COLLECTION_NAME,
-          { ...context, orgName: message }
+          { ...context, orgName: message },
         );
 
         return twimlResponse(
-          `✅ Got it — *${message}*\n\nWhat are you collecting from members?\n\n_Examples: Monthly Service Charge, Gym Membership Fee, Course Dues, School Fees_`
+          `✅ Got it — *${message}*\n\nWhat are you collecting from members?\n\n_Examples: Monthly Service Charge, Gym Membership Fee, Course Dues, School Fees_`,
         );
       }
 
@@ -162,30 +162,28 @@ export class WhatsAppService {
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_ORG_TYPE,
-          { ...context, collectionName: message }
+          { ...context, collectionName: message },
         );
 
         return twimlResponse(
-          `What type of organisation is this?\n\n1️⃣  Estate / Residents Association\n2️⃣  Cooperative / Savings Group\n3️⃣  Gym / Fitness Studio\n4️⃣  School / Lesson Centre\n5️⃣  Clinic / Healthcare\n6️⃣  Other\n\n_Reply with a number (1–6)_`
+          `What type of organisation is this?\n\n1️⃣  Estate / Residents Association\n2️⃣  Cooperative / Savings Group\n3️⃣  Gym / Fitness Studio\n4️⃣  School / Lesson Centre\n5️⃣  Clinic / Healthcare\n6️⃣  Other\n\n_Reply with a number (1–6)_`,
         );
       }
 
       case ConversationStep.AWAITING_ORG_TYPE: {
         const orgType = ORG_TYPES[message];
         if (!orgType) {
-          return twimlResponse(
-            `Please reply with a number between 1 and 6.`
-          );
+          return twimlResponse(`Please reply with a number between 1 and 6.`);
         }
 
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_STRUCTURE,
-          { ...context, orgType }
+          { ...context, orgType },
         );
 
         return twimlResponse(
-          `How should member payments be structured?\n\n1️⃣  *Fixed amount* — everyone pays the same\n2️⃣  *Variable plans* — members choose from different fee options\n\n_Reply 1 or 2_`
+          `How should member payments be structured?\n\n1️⃣  *Fixed amount* — everyone pays the same\n2️⃣  *Variable plans* — members choose from different fee options\n\n_Reply 1 or 2_`,
         );
       }
 
@@ -200,19 +198,19 @@ export class WhatsAppService {
           await this.sessionRepo.updateStep(
             phone,
             ConversationStep.AWAITING_FLAT_AMOUNT,
-            { ...context, structure }
+            { ...context, structure },
           );
           return twimlResponse(
-            `How much does each member pay per cycle?\n\n_Enter amount in ₦. Example: 25000_`
+            `How much does each member pay per cycle?\n\n_Enter amount in ₦. Example: 25000_`,
           );
         } else {
           await this.sessionRepo.updateStep(
             phone,
             ConversationStep.AWAITING_FEE_LINES,
-            { ...context, structure, feeLines: [] }
+            { ...context, structure, feeLines: [] },
           );
           return twimlResponse(
-            `Send your fee options one at a time.\n\nFormat: *Fee Name, Amount*\nExample: Tuition, 150000\n\nSend each fee line separately, then type *done* when finished.`
+            `Send your fee options one at a time.\n\nFormat: *Fee Name, Amount*\nExample: Tuition, 150000\n\nSend each fee line separately, then type *done* when finished.`,
           );
         }
       }
@@ -221,18 +219,18 @@ export class WhatsAppService {
         const amount = parseFloat(message.replace(/,/g, ""));
         if (isNaN(amount) || amount <= 0) {
           return twimlResponse(
-            `Please enter a valid amount in ₦.\nExample: 25000`
+            `Please enter a valid amount in ₦.\nExample: 25000`,
           );
         }
 
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_CYCLE,
-          { ...context, flatAmount: amount }
+          { ...context, flatAmount: amount },
         );
 
         return twimlResponse(
-          `How often is payment collected?\n\n1️⃣  Monthly\n2️⃣  Quarterly\n3️⃣  Yearly\n4️⃣  Termly\n\n_Reply with a number (1–4)_`
+          `How often is payment collected?\n\n1️⃣  Monthly\n2️⃣  Quarterly\n3️⃣  Yearly\n4️⃣  Termly\n5️⃣  One-time only\n\n_Reply with a number (1–5)_`,
         );
       }
 
@@ -241,7 +239,7 @@ export class WhatsAppService {
           const feeLines = context.feeLines || [];
           if (feeLines.length === 0) {
             return twimlResponse(
-              `You need at least one fee line.\n\nSend as *Name, Amount*\nExample: Tuition, 150000`
+              `You need at least one fee line.\n\nSend as *Name, Amount*\nExample: Tuition, 150000`,
             );
           }
 
@@ -252,18 +250,18 @@ export class WhatsAppService {
           await this.sessionRepo.updateStep(
             phone,
             ConversationStep.AWAITING_CYCLE,
-            context
+            context,
           );
 
           return twimlResponse(
-            `Fee lines confirmed:\n${summary}\n\n━━━━━━━━━━━━━━━\nHow often is payment collected?\n\n1️⃣  Monthly\n2️⃣  Quarterly\n3️⃣  Yearly\n4️⃣  Termly\n\n_Reply with a number (1–4)_`
+            `Fee lines confirmed:\n${summary}\n\n━━━━━━━━━━━━━━━\nHow often is payment collected?\n\n1️⃣  Monthly\n2️⃣  Quarterly\n3️⃣  Yearly\n4️⃣  Termly\n5️⃣  One-time only\n\n_Reply with a number (1–5)_`,
           );
         }
 
         const parts = message.split(",");
         if (parts.length < 2) {
           return twimlResponse(
-            `Please send as *Name, Amount*\nExample: Chess Club, 15000`
+            `Please send as *Name, Amount*\nExample: Chess Club, 15000`,
           );
         }
 
@@ -272,7 +270,7 @@ export class WhatsAppService {
 
         if (!feeName || isNaN(feeAmount) || feeAmount <= 0) {
           return twimlResponse(
-            `Invalid format. Please send as *Name, Amount*\nExample: Chess Club, 15000`
+            `Invalid format. Please send as *Name, Amount*\nExample: Chess Club, 15000`,
           );
         }
 
@@ -284,30 +282,28 @@ export class WhatsAppService {
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_FEE_LINES,
-          { ...context, feeLines: updatedFeeLines }
+          { ...context, feeLines: updatedFeeLines },
         );
 
         return twimlResponse(
-          `✅ *${feeName}* — ₦${feeAmount.toLocaleString()} added\n\nSend the next fee line or type *done* to continue.`
+          `✅ *${feeName}* — ₦${feeAmount.toLocaleString()} added\n\nSend the next fee line or type *done* to continue.`,
         );
       }
 
       case ConversationStep.AWAITING_CYCLE: {
         const cycle = CYCLE_TYPES[message];
         if (!cycle) {
-          return twimlResponse(
-            `Please reply with a number between 1 and 4.`
-          );
+          return twimlResponse(`Please reply with a number between 1 and 5.`);
         }
 
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.AWAITING_PAYOUT_BANK,
-          { ...context, cycle }
+          { ...context, cycle },
         );
 
         return twimlResponse(
-          `Almost done! Where should your payouts go when you withdraw collected funds?\n\nSend your *bank name* and *account number*.\nExample: GTBank 0123456789\n\n_Supported banks: GTBank, Access Bank, Zenith Bank, UBA, First Bank, FCMB, Kuda, OPay, PalmPay, Moniepoint and more_`
+          `Almost done! Where should your payouts go when you withdraw collected funds?\n\nSend your *bank name* and *account number*.\nExample: GTBank 0123456789\n\n_Supported banks: GTBank, Access Bank, Zenith Bank, UBA, First Bank, FCMB, Kuda, OPay, PalmPay, Moniepoint and more_`,
         );
       }
 
@@ -315,7 +311,7 @@ export class WhatsAppService {
         const parts = message.trim().split(/\s+/);
         if (parts.length < 2) {
           return twimlResponse(
-            `Please send your bank name and account number together.\nExample: GTBank 0123456789`
+            `Please send your bank name and account number together.\nExample: GTBank 0123456789`,
           );
         }
 
@@ -324,14 +320,14 @@ export class WhatsAppService {
 
         if (!/^\d{10}$/.test(accountNumber)) {
           return twimlResponse(
-            `Account number must be exactly 10 digits.\nExample: GTBank 0123456789`
+            `Account number must be exactly 10 digits.\nExample: GTBank 0123456789`,
           );
         }
 
         const bank = BANK_CODES[bankNameInput];
         if (!bank) {
           return twimlResponse(
-            `I don't recognise that bank. Please try one of these:\nGTBank, Access Bank, Zenith Bank, UBA, First Bank, FCMB, Kuda, OPay, PalmPay, Moniepoint\n\nExample: GTBank 0123456789`
+            `I don't recognise that bank. Please try one of these:\nGTBank, Access Bank, Zenith Bank, UBA, First Bank, FCMB, Kuda, OPay, PalmPay, Moniepoint\n\nExample: GTBank 0123456789`,
           );
         }
 
@@ -344,11 +340,11 @@ export class WhatsAppService {
             payoutBankCode: bank.code,
             payoutBankName: bank.name,
             payoutAccountName: context.orgName || "",
-          }
+          },
         );
 
         return twimlResponse(
-          `Please confirm your payout account:\n\n🏦  *Bank:* ${bank.name}\n🔢  *Account:* ${accountNumber}\n\n_Reply *YES* to confirm, or send your details again to correct them._`
+          `Please confirm your payout account:\n\n🏦  *Bank:* ${bank.name}\n🔢  *Account:* ${accountNumber}\n\n_Reply *YES* to confirm, or send your details again to correct them._`,
         );
       }
 
@@ -357,10 +353,10 @@ export class WhatsAppService {
           await this.sessionRepo.updateStep(
             phone,
             ConversationStep.AWAITING_PAYOUT_BANK,
-            context
+            context,
           );
           return twimlResponse(
-            `No problem. Please send your bank name and account number again.\nExample: GTBank 0123456789`
+            `No problem. Please send your bank name and account number again.\nExample: GTBank 0123456789`,
           );
         }
 
@@ -369,7 +365,7 @@ export class WhatsAppService {
 
       default:
         return twimlResponse(
-          `Something went wrong with your session. Type *restart* to start over.`
+          `Something went wrong with your session. Type *restart* to start over.`,
         );
     }
   }
@@ -378,7 +374,7 @@ export class WhatsAppService {
 
   private async completeOnboarding(
     phone: string,
-    context: ConversationContext
+    context: ConversationContext,
   ): Promise<string> {
     try {
       const slug = (context.orgName || "")
@@ -390,7 +386,7 @@ export class WhatsAppService {
       if (existingOrg) {
         await this.sessionRepo.delete(phone);
         return twimlResponse(
-          `An organisation with this name already exists.\n\nPlease type *restart* and use a different name.`
+          `An organisation with this name already exists.\n\nPlease type *restart* and use a different name.`,
         );
       }
 
@@ -442,19 +438,25 @@ export class WhatsAppService {
 
       if (context.structure === "VARIABLE") {
         return twimlResponse(
-          `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🔗 *Member join code:*\n*${org.inviteCode}*\n\nShare this code with your members. They text it to this number to register and get their own dedicated account.\n\nType *help* to see your available commands.`
+          `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\n🔗 *Member join code:*\n*${org.inviteCode}*\n\nShare this code with your members. They text it to this number to register and get their own dedicated account.\n\nType *help* to see your available commands.`,
+        );
+      }
+
+      if (context.cycle === "ONE_TIME") {
+        return twimlResponse(
+          `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Type:* One-time collection\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\nNow add your members. Each one gets their own dedicated account.\n\nSend each member as:\n*Full Name, Name/ID*\n\nExample:\nEmeka, Boys\nTunde, Boys\n\nType *done* when finished.`,
         );
       }
 
       return twimlResponse(
-        `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\nNow add your members. Each one gets their own dedicated account number.\n\nSend each member as:\n*Full Name, Unit/ID*\n\nExample:\nMrs Okoro, Flat 3B\nMr Bello, Flat 7A\n\nType *done* when finished.`
+        `🎉 *${org.name}* is live on PayFlow!\n\n━━━━━━━━━━━━━━━\n📋  *Collection:* ${context.collectionName}\n🔄  *Cycle:* ${context.cycle}\n🏦  *Payout to:* ${context.payoutBankName} ••${context.payoutBankAccount?.slice(-4)}\n━━━━━━━━━━━━━━━\n\nNow add your members. Each one gets their own dedicated account number.\n\nSend each member as:\n*Full Name, Unit/ID*\n\nExample:\nMrs Okoro, Flat 3B\nMr Bello, Flat 7A\n\nType *done* when finished.`,
       );
     } catch (error) {
       logger.error(
-        `[WhatsApp] Error completing onboarding for ${phone}: ${error}`
+        `[WhatsApp] Error completing onboarding for ${phone}: ${error}`,
       );
       return twimlResponse(
-        `⚠️ Something went wrong setting up your account. Please type *restart* to try again.`
+        `⚠️ Something went wrong setting up your account. Please type *restart* to try again.`,
       );
     }
   }
@@ -464,14 +466,19 @@ export class WhatsAppService {
   private async handleAdminCommand(
     phone: string,
     message: string,
-    orgId: string
+    orgId: string,
   ): Promise<string> {
     const command = message.toLowerCase().trim();
 
     // check if admin is mid-member-addition
     const session = await this.sessionRepo.findByPhone(phone);
     if (session?.step === ConversationStep.AWAITING_MEMBERS) {
-      return await this.handleMemberAddition(phone, message, orgId, session as TypedSession);
+      return await this.handleMemberAddition(
+        phone,
+        message,
+        orgId,
+        session as TypedSession,
+      );
     }
 
     switch (command) {
@@ -489,16 +496,21 @@ export class WhatsAppService {
 
       case "help":
         return twimlResponse(
-          `📱 *PayFlow Commands*\n\n━━━━━━━━━━━━━━━\n• *status* — who has paid this cycle\n• *balance* — your available balance\n• *payout* — withdraw collected funds\n• *add* — register a new member\n• *help* — show this menu\n━━━━━━━━━━━━━━━\n\n_Type any command to get started._`
+          `📱 *PayFlow Commands*\n\n━━━━━━━━━━━━━━━\n• *status* — who has paid this cycle\n• *balance* — your available balance\n• *payout* — withdraw collected funds\n• *add* — register a new member\n• *help* — show this menu\n━━━━━━━━━━━━━━━\n\n_Type any command to get started._`,
         );
 
       default:
         if (message.includes(",")) {
-          return await this.handleMemberAddition(phone, message, orgId, session as TypedSession);
+          return await this.handleMemberAddition(
+            phone,
+            message,
+            orgId,
+            session as TypedSession,
+          );
         }
 
         return twimlResponse(
-          `I didn't understand that.\n\nType *help* to see your available commands.`
+          `I didn't understand that.\n\nType *help* to see your available commands.`,
         );
     }
   }
@@ -518,7 +530,7 @@ export class WhatsAppService {
 
     if (!currentCycle) {
       return twimlResponse(
-        `No active billing cycle found.\n\nType *add* to register your first member and open a cycle.`
+        `No active billing cycle found.\n\nType *add* to register your first member and open a cycle.`,
       );
     }
 
@@ -561,12 +573,10 @@ export class WhatsAppService {
       const balance = await this.orgService.getBalance(orgId);
 
       return twimlResponse(
-        `💰 *Your Balance*\n\n━━━━━━━━━━━━━━━\nTotal collected:  ₦${balance.totalCollected.toLocaleString()}\nTotal withdrawn:  ₦${balance.totalPayouts.toLocaleString()}\nAvailable now:    ₦${balance.available.toLocaleString()}\n━━━━━━━━━━━━━━━\n\nType *payout* to withdraw your available balance.`
+        `💰 *Your Balance*\n\n━━━━━━━━━━━━━━━\nTotal collected:  ₦${balance.totalCollected.toLocaleString()}\nTotal withdrawn:  ₦${balance.totalPayouts.toLocaleString()}\nAvailable now:    ₦${balance.available.toLocaleString()}\n━━━━━━━━━━━━━━━\n\nType *payout* to withdraw your available balance.`,
       );
     } catch (error) {
-      return twimlResponse(
-        `Could not fetch your balance. Please try again.`
-      );
+      return twimlResponse(`Could not fetch your balance. Please try again.`);
     }
   }
 
@@ -574,7 +584,7 @@ export class WhatsAppService {
 
   private async handlePayoutCommand(
     phone: string,
-    orgId: string
+    orgId: string,
   ): Promise<string> {
     try {
       const org = await this.orgRepo.findById(orgId);
@@ -584,22 +594,22 @@ export class WhatsAppService {
 
       if (balance.available <= 0) {
         return twimlResponse(
-          `⚠️ *No balance available*\n\nYou have ₦0 available to withdraw at this time.\n\nType *status* to see the current payment status for your members.`
+          `⚠️ *No balance available*\n\nYou have ₦0 available to withdraw at this time.\n\nType *status* to see the current payment status for your members.`,
         );
       }
 
       const payout = await this.payoutService.requestPayout(
         orgId,
-        balance.available
+        balance.available,
       );
 
       return twimlResponse(
-        `✅ *Payout Initiated*\n\n━━━━━━━━━━━━━━━\nAmount:     ₦${payout.amount.toLocaleString()}\nTo:         ${org.payoutBankName} ••${org.payoutBankAccount.slice(-4)}\nReference:  ${payout.transferRef}\n━━━━━━━━━━━━━━━\n\nFunds will arrive in your account within minutes.`
+        `✅ *Payout Initiated*\n\n━━━━━━━━━━━━━━━\nAmount:     ₦${payout.amount.toLocaleString()}\nTo:         ${org.payoutBankName} ••${org.payoutBankAccount.slice(-4)}\nReference:  ${payout.transferRef}\n━━━━━━━━━━━━━━━\n\nFunds will arrive in your account within minutes.`,
       );
     } catch (error: any) {
       logger.error(`[WhatsApp] Payout error for ${orgId}: ${error}`);
       return twimlResponse(
-        `Payout failed: ${error.message || "Please try again later."}`
+        `Payout failed: ${error.message || "Please try again later."}`,
       );
     }
   }
@@ -608,7 +618,7 @@ export class WhatsAppService {
 
   private async handleAddCommand(
     phone: string,
-    orgId: string
+    orgId: string,
   ): Promise<string> {
     await this.sessionRepo.upsert(phone, {
       role: ConversationRole.ADMIN,
@@ -618,7 +628,7 @@ export class WhatsAppService {
     });
 
     return twimlResponse(
-      `Adding new members.\n\nSend each member as:\n*Full Name, Unit/ID*\n\nExample:\nMrs Okoro, Flat 3B\nMr Bello, Flat 7A\n\nType *done* when finished.`
+      `Adding new members.\n\nSend each member as:\n*Full Name, Unit/ID*\n\nExample:\nMrs Okoro, Flat 3B\nMr Bello, Flat 7A\n\nType *done* when finished.`,
     );
   }
 
@@ -628,7 +638,7 @@ export class WhatsAppService {
     phone: string,
     message: string,
     orgId: string,
-    session: TypedSession | null
+    session: TypedSession | null,
   ): Promise<string> {
     if (message.toLowerCase() === "done") {
       await this.sessionRepo.upsert(phone, {
@@ -641,14 +651,14 @@ export class WhatsAppService {
       const org = await this.orgRepo.findById(orgId);
 
       return twimlResponse(
-        `✅ *Members registered successfully.*\n\nYour dashboard is live at:\npayflow.app/${org?.slug || orgId}\n\n━━━━━━━━━━━━━━━\n*Quick commands:*\n• *status* — see who has paid\n• *balance* — your available balance\n• *payout* — withdraw funds\n• *add* — register more members\n• *help* — all commands`
+        `✅ *Members registered successfully.*\n\nYour dashboard is live at:\npayflow.app/${org?.slug || orgId}\n\n━━━━━━━━━━━━━━━\n*Quick commands:*\n• *status* — see who has paid\n• *balance* — your available balance\n• *payout* — withdraw funds\n• *add* — register more members\n• *help* — all commands`,
       );
     }
 
     const parts = message.split(",");
     if (parts.length < 2) {
       return twimlResponse(
-        `Please send as *Full Name, Unit/ID*\nExample: Mrs Okoro, Flat 3B\n\nType *done* when finished.`
+        `Please send as *Full Name, Unit/ID*\nExample: Mrs Okoro, Flat 3B\n\nType *done* when finished.`,
       );
     }
 
@@ -657,7 +667,7 @@ export class WhatsAppService {
 
     if (!name || !identifier) {
       return twimlResponse(
-        `Invalid format. Please send as *Full Name, Unit/ID*\nExample: Mr Bello, Flat 7A`
+        `Invalid format. Please send as *Full Name, Unit/ID*\nExample: Mr Bello, Flat 7A`,
       );
     }
 
@@ -671,7 +681,7 @@ export class WhatsAppService {
 
       if (!collection.amount) {
         return twimlResponse(
-          `This organisation uses variable pricing. Members must self-enrol using the join code.`
+          `This organisation uses variable pricing. Members must self-enrol using the join code.`,
         );
       }
 
@@ -683,12 +693,12 @@ export class WhatsAppService {
       });
 
       return twimlResponse(
-        `✅ *${name}* added successfully.\n\n━━━━━━━━━━━━━━━\n👤  *${name}* — ${identifier}\n🏦  ${member.vaBankName}\n🔢  ${member.vaNumber}\n💰  Accepts exactly ₦${member.expectedAmount.toLocaleString()}\n━━━━━━━━━━━━━━━\n\n_Forward these details to ${name}. They pay into this account each cycle and it logs automatically._\n\nSend another member or type *done* to finish.`
+        `✅ *${name}* added successfully.\n\n━━━━━━━━━━━━━━━\n👤  *${name}* — ${identifier}\n🏦  ${member.vaBankName}\n🔢  ${member.vaNumber}\n💰  Accepts exactly ₦${member.expectedAmount.toLocaleString()}\n━━━━━━━━━━━━━━━\n\n_Forward these details to ${name}. They pay into this account each cycle and it logs automatically._\n\nSend another member or type *done* to finish.`,
       );
     } catch (error: any) {
       logger.error(`[WhatsApp] Member creation error: ${error}`);
       return twimlResponse(
-        `Could not add ${name}. ${error.message || "Please try again."}`
+        `Could not add ${name}. ${error.message || "Please try again."}`,
       );
     }
   }
@@ -697,7 +707,7 @@ export class WhatsAppService {
 
   private async handleMemberJoin(
     phone: string,
-    message: string
+    message: string,
   ): Promise<string> {
     // uppercase to match how invite code is stored in database
     const inviteCode = message.toUpperCase().trim();
@@ -705,19 +715,19 @@ export class WhatsAppService {
     const org = await this.orgRepo.findByInviteCode(inviteCode);
     if (!org) {
       return twimlResponse(
-        `⚠️ *Invalid join code*\n\nPlease check the code and try again.\n\nIf you received this code from your group admin, make sure you are typing it exactly as shared.`
+        `⚠️ *Invalid join code*\n\nPlease check the code and try again.\n\nIf you received this code from your group admin, make sure you are typing it exactly as shared.`,
       );
     }
 
     // check if this phone is already registered as a member
-    const existingMember = await this.memberRepo.findAllByOrg(org.id).then(
-      (members) => members.find((m) => m.phone === phone)
-    );
+    const existingMember = await this.memberRepo
+      .findAllByOrg(org.id)
+      .then((members) => members.find((m) => m.phone === phone));
 
     if (existingMember) {
       const accountCard = this.memberService.formatAccountCard(existingMember);
       return twimlResponse(
-        `You are already registered with *${org.name}*.\n\n━━━━━━━━━━━━━━━\n${accountCard}\n━━━━━━━━━━━━━━━\n\n_Pay into this account each cycle and your payment logs automatically._`
+        `You are already registered with *${org.name}*.\n\n━━━━━━━━━━━━━━━\n${accountCard}\n━━━━━━━━━━━━━━━\n\n_Pay into this account each cycle and your payment logs automatically._`,
       );
     }
 
@@ -729,14 +739,14 @@ export class WhatsAppService {
     });
 
     return twimlResponse(
-      `👋 Welcome to *${org.name}*\n\nYou are registering for their payment collection on PayFlow.\n\nWhat is your full name?`
+      `👋 Welcome to *${org.name}*\n\nYou are registering for their payment collection on PayFlow.\n\nWhat is your full name?`,
     );
   }
 
   private async handleMemberSession(
     phone: string,
     message: string,
-    session: TypedSession
+    session: TypedSession,
   ): Promise<string> {
     const context: ConversationContext = session.context as ConversationContext;
     const orgId = session.orgId!;
@@ -750,7 +760,7 @@ export class WhatsAppService {
         const collections = await this.collectionRepo.findAllByOrg(orgId);
         if (collections.length === 0) {
           return twimlResponse(
-            `No collection found. Please contact your administrator.`
+            `No collection found. Please contact your administrator.`,
           );
         }
 
@@ -761,7 +771,7 @@ export class WhatsAppService {
 
         if (feeLines.length === 0) {
           return twimlResponse(
-            `No fee options found. Please contact your administrator.`
+            `No fee options found. Please contact your administrator.`,
           );
         }
 
@@ -772,11 +782,11 @@ export class WhatsAppService {
         await this.sessionRepo.updateStep(
           phone,
           ConversationStep.MEMBER_AWAITING_PLAN_SELECTION,
-          { ...context, pendingMemberName: message }
+          { ...context, pendingMemberName: message },
         );
 
         return twimlResponse(
-          `Hi *${message}*! Please select the fees you are enrolled in:\n\n${feeList}\n\nReply with the numbers of your selections, separated by spaces.\nExample: *1 3* for options 1 and 3`
+          `Hi *${message}*! Please select the fees you are enrolled in:\n\n${feeList}\n\nReply with the numbers of your selections, separated by spaces.\nExample: *1 3* for options 1 and 3`,
         );
       }
 
@@ -791,19 +801,19 @@ export class WhatsAppService {
 
         const selectedIndices = selections.map((s) => parseInt(s) - 1);
         const validSelections = selectedIndices.filter(
-          (i) => i >= 0 && i < feeLines.length
+          (i) => i >= 0 && i < feeLines.length,
         );
 
         if (validSelections.length === 0) {
           return twimlResponse(
-            `Invalid selection. Please reply with numbers from the list.\nExample: 1 3`
+            `Invalid selection. Please reply with numbers from the list.\nExample: 1 3`,
           );
         }
 
         const selectedFeeLines = validSelections.map((i) => feeLines[i]);
         const totalAmount = selectedFeeLines.reduce(
           (sum, f) => sum + f.amount,
-          0
+          0,
         );
 
         const summary = selectedFeeLines
@@ -816,11 +826,11 @@ export class WhatsAppService {
           {
             ...context,
             selectedFeeLineIds: selectedFeeLines.map((f) => f.id),
-          }
+          },
         );
 
         return twimlResponse(
-          `Please confirm your fee selection for *${context.pendingMemberName}*:\n\n${summary}\n\n━━━━━━━━━━━━━━━\n💰  *Total per cycle: ₦${totalAmount.toLocaleString()}*\n━━━━━━━━━━━━━━━\n\nReply *YES* to confirm and get your dedicated account number.`
+          `Please confirm your fee selection for *${context.pendingMemberName}*:\n\n${summary}\n\n━━━━━━━━━━━━━━━\n💰  *Total per cycle: ₦${totalAmount.toLocaleString()}*\n━━━━━━━━━━━━━━━\n\nReply *YES* to confirm and get your dedicated account number.`,
         );
       }
 
@@ -829,10 +839,10 @@ export class WhatsAppService {
           await this.sessionRepo.updateStep(
             phone,
             ConversationStep.MEMBER_AWAITING_PLAN_SELECTION,
-            context
+            context,
           );
           return twimlResponse(
-            `No problem. Please select your fee lines again.`
+            `No problem. Please select your fee lines again.`,
           );
         }
 
@@ -841,7 +851,7 @@ export class WhatsAppService {
 
       default:
         return twimlResponse(
-          `Something went wrong. Please send the join code again to restart.`
+          `Something went wrong. Please send the join code again to restart.`,
         );
     }
   }
@@ -849,14 +859,14 @@ export class WhatsAppService {
   private async completeMemberEnrollment(
     phone: string,
     context: ConversationContext,
-    orgId: string
+    orgId: string,
   ): Promise<string> {
     try {
       const selectedFeeLineIds = context.selectedFeeLineIds || [];
 
       if (selectedFeeLineIds.length === 0) {
         return twimlResponse(
-          `No fee lines selected. Please send the join code again to restart.`
+          `No fee lines selected. Please send the join code again to restart.`,
         );
       }
 
@@ -886,12 +896,12 @@ export class WhatsAppService {
       const accountCard = this.memberService.formatAccountCard(member);
 
       return twimlResponse(
-        `✅ *Registration Complete*\n\n━━━━━━━━━━━━━━━\n${accountCard}\n━━━━━━━━━━━━━━━\n\n_Save this account number. Every time you pay into it, your payment is recorded automatically. No receipts needed, no follow-up required._`
+        `✅ *Registration Complete*\n\n━━━━━━━━━━━━━━━\n${accountCard}\n━━━━━━━━━━━━━━━\n\n_Save this account number. Every time you pay into it, your payment is recorded automatically. No receipts needed, no follow-up required._`,
       );
     } catch (error: any) {
       logger.error(`[WhatsApp] Member enrollment error: ${error}`);
       return twimlResponse(
-        `Enrollment failed. ${error.message || "Please contact your administrator."}`
+        `Enrollment failed. ${error.message || "Please contact your administrator."}`,
       );
     }
   }
