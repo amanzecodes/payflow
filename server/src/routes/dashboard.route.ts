@@ -17,7 +17,7 @@ const chargeRepo = new ChargeRepository()
 const payoutRepo = new PayoutRepository()
 const orgService = new OrganisationService(orgRepo, chargeRepo, payoutRepo)
 const memberService = new MemberService(memberRepo, orgRepo, paymentProvider)
-const dashboardController = new DashboardController(orgService, memberService, chargeRepo)
+const dashboardController = new DashboardController(orgService, memberService)
 
 router.use(authenticate)
 router.use(requireOrgAccess)
