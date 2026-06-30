@@ -28,7 +28,6 @@ export function Step4Done({
     <div className="space-y-8 text-center">
       {/* Success Header */}
       <div className="space-y-3 py-4">
-        <div className="text-6xl animate-bounce inline-block">✓</div>
         <h2 className="text-3xl font-bold text-gray-900">All Set!</h2>
         <p className="text-gray-600 text-lg">Your onboarding is complete and ready to go</p>
       </div>

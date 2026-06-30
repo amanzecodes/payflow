@@ -159,7 +159,13 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
             <CustomSelect
               value={bankCode}
               onChange={setBankCode}
-              options={banks.data?.map((bank) => ({ label: bank.name, value: bank.code })) || []}
+              options={
+                banks.data
+                  ? Array.from(
+                      new Map(banks.data.map((bank) => [bank.code, bank])).values()
+                    ).map((bank) => ({ label: bank.name, value: bank.code }))
+                  : []
+              }
               placeholder="Select a bank"
               isLoading={banks.isLoading}
               disabled={banks.isLoading}

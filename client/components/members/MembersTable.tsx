@@ -3,13 +3,13 @@
 import { motion } from "framer-motion";
 import { HiOutlineUserPlus } from "react-icons/hi2";
 
-import { STATUS_DOT, STATUS_STYLES } from "./data";
+import { CHARGE_STATUS_DOT, CHARGE_STATUS_STYLES, getChargeStatusDisplay } from "./data";
 import { rowVariants } from "./animations";
-import type { Member } from "./types";
+import type { MemberWithChargeStatus } from "@/lib/api/member.api";
 
 interface MembersTableProps {
-  members: Member[];
-  onSelect: (member: Member) => void;
+  members: MemberWithChargeStatus[];
+  onSelect: (member: MemberWithChargeStatus) => void;
 }
 
 const initialsOf = (name: string) =>
@@ -41,8 +41,8 @@ const MembersTable = ({ members, onSelect }: MembersTableProps) => {
         <thead>
           <tr className="text-xs font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
             <th className="pb-3 pl-1">Member</th>
-            <th className="pb-3">Plan</th>
-            <th className="pb-3">Dedicated Account</th>
+            <th className="pb-3">Expected Amount</th>
+            <th className="pb-3">Virtual Account</th>
             <th className="pb-3">Status</th>
             <th className="pb-3 text-right pr-1">Last Payment</th>
           </tr>
@@ -63,7 +63,7 @@ const MembersTable = ({ members, onSelect }: MembersTableProps) => {
                   <span className="relative h-9 w-9 rounded-full bg-zinc-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
                     {initialsOf(member.name)}
                     <span
-                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${STATUS_DOT[member.status]}`}
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${member.currentChargeStatus ? CHARGE_STATUS_DOT[member.currentChargeStatus] : "bg-zinc-400"}`}
                     />
                   </span>
                   <div className="min-w-0">
@@ -72,19 +72,21 @@ const MembersTable = ({ members, onSelect }: MembersTableProps) => {
                   </div>
                 </div>
               </td>
-              <td className="py-4 text-sm text-zinc-600">{member.plan}</td>
+              <td className="py-4 text-sm text-zinc-600">₦{member.expectedAmount.toLocaleString()}</td>
               <td className="py-4">
-                <p className="text-sm font-mono text-zinc-600">{member.accountNumber}</p>
-                <p className="text-xs text-zinc-400 mt-0.5">{member.bank}</p>
+                <p className="text-sm font-mono text-zinc-600">{member.vaNumber}</p>
+                <p className="text-xs text-zinc-400 mt-0.5">{member.vaBankName}</p>
               </td>
               <td className="py-4">
                 <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[member.status]}`}
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${member.currentChargeStatus ? CHARGE_STATUS_STYLES[member.currentChargeStatus] : "bg-zinc-50 text-zinc-700 border-zinc-100"}`}
                 >
-                  {member.status}
+                  {getChargeStatusDisplay(member.currentChargeStatus)}
                 </span>
               </td>
-              <td className="py-4 text-right pr-1 text-sm text-zinc-500">{member.lastPaymentDate}</td>
+              <td className="py-4 text-right pr-1 text-sm text-zinc-500">
+                {member.lastPaidAt ? new Date(member.lastPaidAt).toLocaleDateString() : "-"}
+              </td>
             </motion.tr>
           ))}
         </tbody>

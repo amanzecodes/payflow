@@ -23,7 +23,6 @@ interface SidebarProps {
 const NAVIGATION_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: HiOutlineSquares2X2 },
   { name: "Members", href: "/members", icon: HiOutlineUserGroup },
-  { name: "Cycles", href: "/cycles", icon: TbHistory },
   { name: "Payouts", href: "/payout", icon: HiOutlineBanknotes },
   { name: "Settings", href: "/settings", icon: HiOutlineCog6Tooth },
 ];

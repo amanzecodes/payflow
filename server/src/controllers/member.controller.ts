@@ -31,7 +31,7 @@ export class MemberController {
 
   async getAllByOrg(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const members = await this.memberService.getAllByOrg(req.params.orgId as string)
+      const members = await this.memberService.getAllByOrgWithChargeStatus(req.params.orgId as string)
       res.status(200).json({ success: true, data: members })
     } catch (error) {
       next(error)

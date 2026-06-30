@@ -17,7 +17,7 @@ export class DashboardController {
     const [org, balance, members] = await Promise.all([
       this.orgService.getById(orgId),
       this.orgService.getBalance(orgId),
-      this.memberService.getAllByOrg(orgId),
+      this.memberService.getAllByOrgWithChargeStatus(orgId),
     ])
 
     const currentCycle = await prisma.cycle.findFirst({

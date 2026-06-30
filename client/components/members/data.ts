@@ -3,21 +3,41 @@ import type { Member, MemberStatus, StatusFilter } from "./types";
 export const STATUS_FILTERS: StatusFilter[] = ["All", "Overdue", "Pending", "Paid"];
 
 export const STATUS_WEIGHT: Record<MemberStatus, number> = {
-  Overdue: 0,
-  Pending: 1,
-  Paid: 2,
+  ACTIVE: 0,
+  Overdue: 1,
+  Pending: 2,
+  Paid: 3,
 };
 
 export const STATUS_STYLES: Record<MemberStatus, string> = {
+  ACTIVE: "bg-blue-50 text-blue-700 border-blue-100",
   Overdue: "bg-rose-50 text-rose-700 border-rose-100",
   Pending: "bg-amber-50 text-amber-700 border-amber-100",
   Paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
 export const STATUS_DOT: Record<MemberStatus, string> = {
+  ACTIVE: "bg-blue-500",
   Overdue: "bg-rose-500",
   Pending: "bg-amber-500",
   Paid: "bg-emerald-500",
+};
+
+export const CHARGE_STATUS_STYLES: Record<string, string> = {
+  OVERDUE: "bg-rose-50 text-rose-700 border-rose-100",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-100",
+  PAID: "bg-emerald-50 text-emerald-700 border-emerald-100",
+};
+
+export const CHARGE_STATUS_DOT: Record<string, string> = {
+  OVERDUE: "bg-rose-500",
+  PENDING: "bg-amber-500",
+  PAID: "bg-emerald-500",
+};
+
+export const getChargeStatusDisplay = (status: string | null): string => {
+  if (!status) return "N/A";
+  return status.charAt(0) + status.slice(1).toLowerCase();
 };
 
 export const MOCK_MEMBERS: Member[] = [

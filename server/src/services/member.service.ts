@@ -3,6 +3,7 @@ import { MemberRepository } from '../repositories/member.repository'
 import { OrganisationRepository } from '../repositories/organisation.repository'
 import { PaymentProvider } from '../providers/PaymentProviders'
 import { AppError } from '../middleware/error.middleware'
+import { prisma } from '../lib/prisma'
 
 export class MemberService {
   constructor(
@@ -31,7 +32,8 @@ export class MemberService {
       data.expectedAmount
     )
 
-    return this.memberRepo.create({
+    // create the member
+    const member = await this.memberRepo.create({
       id: memberId,
       name: data.name,
       identifier: data.identifier,
@@ -43,11 +45,78 @@ export class MemberService {
       accountSent: false,
       org: { connect: { id: data.orgId } }
     })
+
+    // find the current open cycle for this org
+    // dueDate > now means the cycle has not expired yet
+    const currentCycle = await prisma.cycle.findFirst({
+      where: {
+        collection: { orgId: data.orgId },
+        dueDate: { gt: new Date() }
+      },
+      orderBy: { openedAt: 'desc' }
+    })
+
+    // create a charge for this member in the current cycle
+    if (currentCycle) {
+      await prisma.charge.create({
+        data: {
+          memberId: member.id,
+          cycleId: currentCycle.id,
+          amount: data.expectedAmount,
+          status: 'PENDING'
+        }
+      })
+    }
+
+    return member
   }
 
-  async getAllByOrg(orgId: string): Promise<Member[]> {
-    return this.memberRepo.findAllByOrg(orgId)
-  }
+ async getAllByOrgWithChargeStatus(orgId: string): Promise<Array<Member & {
+  currentChargeStatus: 'PENDING' | 'PAID' | 'OVERDUE' | null
+  lastPaidAt: string | null
+}>> {
+  const members = await this.memberRepo.findAllByOrg(orgId)
+
+  // find current open cycle for this org
+  const currentCycle = await prisma.cycle.findFirst({
+    where: {
+      collection: { orgId },
+      dueDate: { gt: new Date() }
+    },
+    orderBy: { openedAt: 'desc' }
+  })
+
+  // fetch all charges for this cycle in one query
+  const currentCycleCharges = currentCycle
+    ? await prisma.charge.findMany({
+        where: { cycleId: currentCycle.id }
+      })
+    : []
+
+  // fetch last paid charge per member in one query
+  const lastPaidCharges = await prisma.charge.findMany({
+    where: {
+      memberId: { in: members.map(m => m.id) },
+      status: 'PAID'
+    },
+    orderBy: { paidAt: 'desc' },
+    distinct: ['memberId']
+  })
+
+  // build lookup maps
+  const chargeByMember = new Map(
+    currentCycleCharges.map(c => [c.memberId, c])
+  )
+  const lastPaidByMember = new Map(
+    lastPaidCharges.map(c => [c.memberId, c])
+  )
+
+  return members.map(member => ({
+    ...member,
+    currentChargeStatus: chargeByMember.get(member.id)?.status ?? null,
+    lastPaidAt: lastPaidByMember.get(member.id)?.paidAt?.toISOString() ?? null
+  }))
+}
 
   async getById(id: string): Promise<Member> {
     const member = await this.memberRepo.findById(id)

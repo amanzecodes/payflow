@@ -1,4 +1,4 @@
-export type MemberStatus = "Paid" | "Pending" | "Overdue";
+export type MemberStatus = "ACTIVE" | "Paid" | "Pending" | "Overdue";
 
 export interface FeeLine {
   id: string;
@@ -18,13 +18,18 @@ export interface Member {
   id: string;
   name: string;
   identifier: string;
-  plan: string;
-  accountNumber: string;
-  bank: string;
+  phone: string | null;
+  expectedAmount: number;
+  orgId: string;
+  vaNumber: string;
+  vaBankName: string;
+  accountRef: string;
   status: MemberStatus;
-  lastPaymentDate: string;
+  accountSent: boolean;
+  createdAt: Date;
+  updatedAt: Date;
   feeLines?: FeeLine[];
-  paymentHistory: PaymentRecord[];
+  paymentHistory?: PaymentRecord[];
 }
 
-export type StatusFilter = "All" | MemberStatus;
+export type StatusFilter = "All" | "Overdue" | "Pending" | "Paid";

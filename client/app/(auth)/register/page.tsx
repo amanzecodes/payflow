@@ -9,6 +9,7 @@ import { PhoneInput } from "@/components/auth/PhoneInput";
 import { useRegister } from "@/hooks/auth/use-register";
 import { getApiErrorMessage } from "@/lib/api/error";
 import { validateRegisterForm } from "@/lib/validation/auth.validation";
+import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const RegisterPage = () => {
   const router = useRouter();
@@ -19,6 +20,7 @@ const RegisterPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const register = useRegister();
+  const resetOnboarding = useOnboardingStore((state) => state.reset);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,7 @@ const RegisterPage = () => {
 
     try {
       await register.mutateAsync({ name, email, phone: `+234${phone}`, password });
+      resetOnboarding();
       await new Promise(resolve => setTimeout(resolve, 500));
       router.push("/onboarding");
     } catch (err) {

@@ -1,42 +1,67 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { HiOutlineUserPlus } from "react-icons/hi2";
-
-import { MOCK_MEMBERS, STATUS_WEIGHT } from "./data";
+import { useMemo, useState, useEffect } from "react";
+import { PiHandshake } from "react-icons/pi";
 import FilterBar from "./FilterBar";
 import MembersTable from "./MembersTable";
 import MemberDetailPanel from "./MemberDetailPanel";
 import AddMemberPanel from "./AddMemberPanel";
 import type { Member, StatusFilter } from "./types";
+import type { MemberWithChargeStatus } from "@/lib/api/member.api";
+import { useMembers } from "@/hooks/members/use-member";
+import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const MembersPage = () => {
-  const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS);
+  const orgId = useOnboardingStore((state) => state.orgId);
+  const hasHydrated = useOnboardingStore((state) => state._hasHydrated);
+  const { data: fetchedMembers = [], isLoading, error } = useMembers(orgId || "");
+
+  const [members, setMembers] = useState<MemberWithChargeStatus[]>([]);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("All");
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberWithChargeStatus | null>(null);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (fetchedMembers.length > 0) {
+      setMembers(fetchedMembers);
+    }
+  }, [fetchedMembers]);
 
   const filteredMembers = useMemo(() => {
     const normalized = search.trim().toLowerCase();
+    const filterMap: Record<StatusFilter, string | null> = {
+      All: null,
+      Overdue: "OVERDUE",
+      Pending: "PENDING",
+      Paid: "PAID",
+    };
 
     return members
-      .filter((member) => activeFilter === "All" || member.status === activeFilter)
+      .filter((member) => {
+        const targetStatus = filterMap[activeFilter];
+        return targetStatus === null || member.currentChargeStatus === targetStatus;
+      })
       .filter(
         (member) =>
           !normalized ||
           member.name.toLowerCase().includes(normalized) ||
           member.identifier.toLowerCase().includes(normalized)
       )
-      .sort((a, b) => STATUS_WEIGHT[a.status] - STATUS_WEIGHT[b.status]);
+      .sort((a, b) => {
+        const statusOrder = { OVERDUE: 0, PENDING: 1, PAID: 2, null: 3 };
+        const aOrder = statusOrder[a.currentChargeStatus as keyof typeof statusOrder] ?? 3;
+        const bOrder = statusOrder[b.currentChargeStatus as keyof typeof statusOrder] ?? 3;
+        return aOrder - bOrder;
+      });
   }, [members, search, activeFilter]);
 
   const counts = useMemo(
     () => ({
       All: members.length,
-      Overdue: members.filter((member) => member.status === "Overdue").length,
-      Pending: members.filter((member) => member.status === "Pending").length,
-      Paid: members.filter((member) => member.status === "Paid").length,
+      Overdue: members.filter((member) => member.currentChargeStatus === "OVERDUE").length,
+      Pending: members.filter((member) => member.currentChargeStatus === "PENDING").length,
+      Paid: members.filter((member) => member.currentChargeStatus === "PAID").length,
     }),
     [members]
   );
@@ -46,9 +71,39 @@ const MembersPage = () => {
     setSelectedMember(null);
   };
 
-  const handleCreate = (member: Member) => {
+  const handleCreate = (member: MemberWithChargeStatus) => {
     setMembers((prev) => [member, ...prev]);
   };
+
+  if (!hasHydrated || isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-zinc-200 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Members</h1>
+            <p className="text-sm text-zinc-500 mt-2.5 max-w-xl leading-relaxed">
+              Loading members...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-zinc-200 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Members</h1>
+            <p className="text-sm text-red-500 mt-2.5 max-w-xl leading-relaxed">
+              Error loading members. Please try again.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,9 +118,9 @@ const MembersPage = () => {
 
         <button
           onClick={() => setIsAddPanelOpen(true)}
-          className="inline-flex items-center justify-center gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-lg px-5 py-3 transition-colors shadow-sm self-start sm:self-auto"
+          className="inline-flex items-center justify-center cursor-pointer gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-sm px-5 py-3 transition-colors shadow-sm self-start sm:self-auto"
         >
-          <HiOutlineUserPlus size={18} />
+          <PiHandshake size={18} />
           Add Member
         </button>
       </div>

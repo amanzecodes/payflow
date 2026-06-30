@@ -5,12 +5,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { HiOutlineBanknotes, HiOutlineXMark } from "react-icons/hi2";
 
 import { backdropVariants, panelVariants } from "./animations";
-import type { Member } from "./types";
+import type { MemberWithChargeStatus } from "@/lib/api/member.api";
 
 interface AddMemberPanelProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (member: Member) => void;
+  onCreate: (member: MemberWithChargeStatus) => void;
 }
 
 const AddMemberPanel = ({ open, onClose, onCreate }: AddMemberPanelProps) => {
@@ -29,16 +29,22 @@ const AddMemberPanel = ({ open, onClose, onCreate }: AddMemberPanelProps) => {
     event.preventDefault();
     if (!name.trim() || !identifier.trim() || !planAmount.trim()) return;
 
-    const newMember: Member = {
+    const newMember: MemberWithChargeStatus = {
       id: `M-${Date.now()}`,
       name: name.trim(),
       identifier: identifier.trim(),
-      plan: `₦${planAmount.trim()} / cycle`,
-      accountNumber: "Provisioning…",
-      bank: "Nomba MFB",
+      orgId: "",
+      phone: null,
+      vaNumber: "Provisioning…",
+      vaBankName: "Nomba MFB",
+      accountRef: "Provisioning…",
+      expectedAmount: parseFloat(planAmount.trim().replace(/,/g, "")),
       status: "Pending",
-      lastPaymentDate: "—",
-      paymentHistory: [],
+      accountSent: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentChargeStatus: "PENDING",
+      lastPaidAt: null,
     };
 
     onCreate(newMember);

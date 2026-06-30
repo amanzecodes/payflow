@@ -4,13 +4,13 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { HiOutlineExclamationTriangle, HiOutlineXMark } from "react-icons/hi2";
 
-import { STATUS_STYLES } from "./data";
+import { CHARGE_STATUS_STYLES, getChargeStatusDisplay } from "./data";
 import { backdropVariants, panelVariants } from "./animations";
 import CopyButton from "./CopyButton";
-import type { Member } from "./types";
+import type { MemberWithChargeStatus } from "@/lib/api/member.api";
 
 interface MemberDetailPanelProps {
-  member: Member | null;
+  member: MemberWithChargeStatus | null;
   onClose: () => void;
   onDeactivate: (memberId: string) => void;
 }
@@ -71,27 +71,61 @@ const MemberDetailPanel = ({ member, onClose, onDeactivate }: MemberDetailPanelP
             </div>
 
             <div className="p-6 space-y-7">
-              {/* Status + Plan */}
+              {/* Status + Amount */}
               <div className="flex items-center justify-between">
                 <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[member.status]}`}
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${member.currentChargeStatus ? CHARGE_STATUS_STYLES[member.currentChargeStatus] : "bg-zinc-50 text-zinc-700 border-zinc-100"}`}
                 >
-                  {member.status}
+                  {getChargeStatusDisplay(member.currentChargeStatus)}
                 </span>
-                <span className="text-sm font-semibold text-zinc-900">{member.plan}</span>
+                <span className="text-sm font-semibold text-zinc-900">₦{member.expectedAmount.toLocaleString()}</span>
               </div>
 
-              {/* Dedicated Account */}
+              {/* Last Paid At */}
+              {member.lastPaidAt && (
+                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                  <p className="text-xs text-zinc-400 font-medium mb-1">Last Payment Date</p>
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {new Date(member.lastPaidAt).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+
+              {/* Virtual Account */}
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
-                  Dedicated Account
+                  Virtual Account
                 </p>
-                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-mono font-semibold text-zinc-900">{member.accountNumber}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">{member.bank}</p>
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <p className="text-xs text-zinc-400 font-medium mb-1">VA Number</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-mono font-semibold text-zinc-900">{member.vaNumber}</p>
+                      <CopyButton value={member.vaNumber} />
+                    </div>
                   </div>
-                  <CopyButton value={member.accountNumber} />
+                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <p className="text-xs text-zinc-400 font-medium mb-1">Bank</p>
+                    <p className="text-sm font-semibold text-zinc-900">{member.vaBankName}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <p className="text-xs text-zinc-400 font-medium mb-1">Account Reference</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-mono font-semibold text-zinc-900">{member.accountRef}</p>
+                      <CopyButton value={member.accountRef} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
+                  Contact
+                </p>
+                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                  <p className="text-xs text-zinc-400 font-medium mb-1">Phone</p>
+                  <p className="text-sm font-semibold text-zinc-900">{member.phone || "Not provided"}</p>
                 </div>
               </div>
 
@@ -113,28 +147,30 @@ const MemberDetailPanel = ({ member, onClose, onDeactivate }: MemberDetailPanelP
               )}
 
               {/* Payment History */}
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
-                  Payment History
-                </p>
-                <div className="space-y-2">
-                  {member.paymentHistory.map((record) => (
-                    <div
-                      key={record.id}
-                      className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 border border-zinc-100"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">{record.cycle}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5 font-mono">{record.reference}</p>
+              {member.paymentHistory && member.paymentHistory.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
+                    Payment History
+                  </p>
+                  <div className="space-y-2">
+                    {member.paymentHistory.map((record) => (
+                      <div
+                        key={record.id}
+                        className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 border border-zinc-100"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">{record.cycle}</p>
+                          <p className="text-xs text-zinc-400 mt-0.5 font-mono">{record.reference}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-zinc-900">{record.amount}</p>
+                          <p className="text-xs text-zinc-400 mt-0.5">{record.date}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-zinc-900">{record.amount}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">{record.date}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Deactivate */}
               <div className="pt-2 border-t border-zinc-100">

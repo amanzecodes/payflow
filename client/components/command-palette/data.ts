@@ -1,7 +1,6 @@
 import {
   HiOutlineArrowLeftOnRectangle,
   HiOutlineBanknotes,
-  HiOutlineCalendarDays,
   HiOutlineCog6Tooth,
   HiOutlineSquares2X2,
   HiOutlineUserGroup,
@@ -15,7 +14,6 @@ export const COMMAND_GROUPS: CommandGroup[] = [
     items: [
       { name: "Overview", href: "/dashboard", icon: HiOutlineSquares2X2 },
       { name: "Members", href: "/members", icon: HiOutlineUserGroup },
-      { name: "Cycles", href: "/cycles", icon: HiOutlineCalendarDays },
       { name: "Payouts", href: "/payout", icon: HiOutlineBanknotes },
     ],
   },
