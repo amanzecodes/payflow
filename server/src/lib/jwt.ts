@@ -31,19 +31,20 @@ export function generateTokens(payload: JwtPayload): AuthTokens {
 }
 
 export function setTokenCookies(res: Response, tokens: AuthTokens): void {
-  res.cookie('access_token', tokens.accessToken, {
+  const isProduction = env.NODE_ENV === 'production'
+
+  const cookieOptions = {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 
-  })
+    secure: isProduction,
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  }
 
-
+  res.cookie('access_token', tokens.accessToken, cookieOptions)
   res.cookie('refresh_token', tokens.refreshToken, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days in ms
+    ...cookieOptions,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
   })
 }
 

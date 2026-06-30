@@ -18,10 +18,34 @@ app.post('/test-webhook', (req, res) => {
   res.send('ok')
 })
 
-app.use(helmet())
+// Temporarily disable helmet to debug
+// app.use(helmet())
+
+const isDevelopment = process.env.NODE_ENV !== 'production'
+const corsOrigin = isDevelopment
+  ? (origin: string | undefined) => {
+      // In development, allow localhost, 127.0.0.1, and any IP pattern
+      const allowedPatterns = [
+        /^http:\/\/localhost(:\d+)?$/,
+        /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+        /^http:\/\/192\.168\..*(:\d+)?$/,
+        /^http:\/\/10\..*(:\d+)?$/,
+        /^http:\/\/172\..*(:\d+)?$/,
+        /^https:\/\/.+\.outray\.app$/,
+      ]
+      if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
+        return true
+      }
+      console.warn(`CORS request from ${origin} rejected`)
+      return false
+    }
+  : process.env.CLIENT_URL || 'https://app.example.com'
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true 
+  origin: corsOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 app.use(cookieParser())
 app.use(requestLogger)

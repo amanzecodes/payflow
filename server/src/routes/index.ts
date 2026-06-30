@@ -7,6 +7,8 @@ import webhookRoutes from './webhook.routes'
 import dashboardRoutes from './dashboard.route'
 import collectionRoutes from './collection.route'
 import whatsappRoutes from './whatsapp.route'
+import banksRoutes from './banks.route'
+import feeLineRoutes from './feeline.route'
 
 const router = Router()
 
@@ -18,5 +20,7 @@ router.use('/webhooks', webhookRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/organisations/:orgId/collections', collectionRoutes)
 router.use('/whatsapp', whatsappRoutes)
+router.use('/banks', banksRoutes)
+router.use('/fee-lines', feeLineRoutes)
 
 export { router }

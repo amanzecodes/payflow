@@ -5,7 +5,7 @@ import { CollectionService } from '../services/collection.service'
 const createCollectionSchema = z.object({
   name: z.string().min(2, 'Collection name must be at least 2 characters'),
   amount: z.number().positive('Amount must be greater than zero').optional(),
-  cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'TERMLY']),
+  cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'TERMLY', 'ONE_TIME']),
 })
 
 const updateCollectionSchema = z.object({
