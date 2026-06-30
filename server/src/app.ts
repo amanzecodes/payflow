@@ -39,7 +39,17 @@ const corsOrigin = isDevelopment
       console.warn(`CORS request from ${origin} rejected`)
       return false
     }
-  : process.env.CLIENT_URL || 'https://app.example.com'
+  : (origin: string | undefined) => {
+      // In production, allow configured URLs and Vercel deployments
+      const allowedUrls = [
+        process.env.CLIENT_URL || 'https://payflow-lemon.vercel.app',
+      ]
+      if (!origin || allowedUrls.includes(origin)) {
+        return true
+      }
+      console.warn(`CORS request from ${origin} rejected`)
+      return false
+    }
 
 app.use(cors({
   origin: corsOrigin,
