@@ -107,7 +107,62 @@ export default function DashboardClientPage() {
     }
   }, [hasHydrated, orgId, router]);
 
-  const { data: dashboard } = useDashboardData(orgId!);
+  const { data: dashboard, isLoading } = useDashboardData(orgId!);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-zinc-200 pb-6">
+          <div>
+            <div className="h-8 w-48 bg-zinc-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-96 bg-zinc-100 rounded animate-pulse" />
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-6 rounded-xl bg-white min-h-36">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-4 w-32 bg-zinc-200 rounded animate-pulse" />
+                <div className="h-9 w-9 bg-zinc-200 rounded-lg animate-pulse" />
+              </div>
+              <div className="h-8 w-40 bg-zinc-200 rounded animate-pulse mb-2" />
+              <div className="h-3 w-48 bg-zinc-100 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Actions Skeleton */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-6 rounded-xl bg-white">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex-1 h-11 bg-zinc-200 rounded-lg animate-pulse" />
+          ))}
+        </div>
+
+        {/* Content Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="p-6 rounded-xl bg-white">
+              <div className="h-5 w-40 bg-zinc-200 rounded animate-pulse mb-4" />
+              <div className="space-y-3">
+                {[...Array(5)].map((_, j) => (
+                  <div key={j} className="flex justify-between items-center py-3 border-b border-zinc-100 last:border-0">
+                    <div className="flex-1">
+                      <div className="h-4 w-32 bg-zinc-200 rounded animate-pulse mb-2" />
+                      <div className="h-3 w-24 bg-zinc-100 rounded animate-pulse" />
+                    </div>
+                    <div className="h-4 w-20 bg-zinc-200 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const charges = (dashboard?.data?.currentCycle?.charges || []).sort(
     (a, b) =>
