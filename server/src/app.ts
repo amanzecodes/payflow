@@ -18,12 +18,11 @@ app.post('/test-webhook', (req, res) => {
   res.send('ok')
 })
 
-// Temporarily disable helmet to debug
-// app.use(helmet())
+app.use(helmet())
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 const corsOrigin = isDevelopment
-  ? (origin: string | undefined) => {
+  ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // In development, allow localhost, 127.0.0.1, and any IP pattern
       const allowedPatterns = [
         /^http:\/\/localhost(:\d+)?$/,
@@ -34,21 +33,24 @@ const corsOrigin = isDevelopment
         /^https:\/\/.+\.outray\.app$/,
       ]
       if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
-        return true
+        callback(null, true)
+      } else {
+        console.warn(`CORS request from ${origin} rejected`)
+        callback(null, false)
       }
-      console.warn(`CORS request from ${origin} rejected`)
-      return false
     }
-  : (origin: string | undefined) => {
+  : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // In production, allow configured URLs and Vercel deployments
       const allowedUrls = [
         process.env.CLIENT_URL || 'https://payflow-lemon.vercel.app',
+        'https://payflow-lemon.vercel.app',
       ]
       if (!origin || allowedUrls.includes(origin)) {
-        return true
+        callback(null, true)
+      } else {
+        console.warn(`CORS request from ${origin} rejected`)
+        callback(null, false)
       }
-      console.warn(`CORS request from ${origin} rejected`)
-      return false
     }
 
 app.use(cors({
