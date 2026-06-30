@@ -22,13 +22,13 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = registerSchema.parse(req.body)
-      const { admin, tokens } = await this.authService.register(data)
+      const { admin, tokens, organisations } = await this.authService.register(data)
 
       setTokenCookies(res, tokens)
 
       res.status(201).json({
         success: true,
-        data: { admin }
+        data: { admin, organisations }
       })
     } catch (error) {
       next(error)
@@ -38,13 +38,13 @@ export class AuthController {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = loginSchema.parse(req.body)
-      const { admin, tokens } = await this.authService.login(data)
+      const { admin, tokens, organisations } = await this.authService.login(data)
 
       setTokenCookies(res, tokens)
 
       res.status(200).json({
         success: true,
-        data: { admin }
+        data: { admin, organisations }
       })
     } catch (error) {
       next(error)

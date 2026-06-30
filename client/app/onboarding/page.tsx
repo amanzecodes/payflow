@@ -8,29 +8,15 @@ import { Step1OrganisationDetails } from "@/components/onboarding/Step1Organisat
 import { Step2CollectionSetup } from "@/components/onboarding/Step2CollectionSetup";
 import { Step3AddMembers } from "@/components/onboarding/Step3AddMembers";
 import { Step4Done } from "@/components/onboarding/Step4Done";
-import type { FeeLine, OrgType, Structure } from "@/types/onboarding.types";
+import type { FeeLine } from "@/types/onboarding.types";
 import { apiClient } from "@/lib/api/client";
+import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const openSans = Open_Sans({ subsets: ["latin"] });
 
-interface OnboardingState {
-  step: 1 | 2 | 3 | 4;
-  orgId?: string;
-  orgName?: string;
-  orgType?: OrgType;
-  structure?: Structure;
-  collectionId?: string;
-  collectionName?: string;
-  collectionCycle?: string;
-  collectionAmount?: number;
-  feeLines?: FeeLine[];
-  memberCount?: number;
-  inviteCode?: string;
-}
-
 export default function OnboardingPage() {
   const router = useRouter();
-  const [state, setState] = useState<OnboardingState>({ step: 1 });
+  const state = useOnboardingStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -45,7 +31,7 @@ export default function OnboardingPage() {
           router.push("/dashboard");
         }
       } catch (err) {
-        // Not authenticated or no org exists, continue to onboarding
+        
       } finally {
         setIsLoading(false);
       }
@@ -63,14 +49,12 @@ export default function OnboardingPage() {
   }
 
   const handleStep1Next = (orgId: string, data: any) => {
-    setState((prev) => ({
-      ...prev,
-      step: 2,
+    state.setOrgDetails({
       orgId,
       orgName: data.name,
       orgType: data.type,
       structure: data.structure,
-    }));
+    });
   };
 
   const handleStep2Next = (
@@ -80,15 +64,13 @@ export default function OnboardingPage() {
     collectionAmount?: number,
     feeLines?: FeeLine[]
   ) => {
-    setState((prev) => ({
-      ...prev,
-      step: 3,
+    state.setCollectionDetails({
       collectionId,
       collectionName,
       collectionCycle,
       collectionAmount,
       feeLines,
-    }));
+    });
   };
 
   const handleStep3Next = () => {
@@ -99,19 +81,15 @@ export default function OnboardingPage() {
             success: boolean;
             data: { inviteCode: string };
           }>(`/organisations/${state.orgId}/invite-code`);
-          setState((prev) => ({
-            ...prev,
-            step: 4,
-            inviteCode: data.data.inviteCode,
-          }));
+          state.setInviteCode(data.data.inviteCode);
         } catch (err) {
           console.error("Failed to fetch invite code");
-          setState((prev) => ({ ...prev, step: 4 }));
+          state.setStep(4);
         }
       };
       fetchInviteCode();
     } else {
-      setState((prev) => ({ ...prev, step: 4 }));
+      state.setStep(4);
     }
   };
 

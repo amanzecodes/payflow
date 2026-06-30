@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { Admin } from '../generated/prisma/client'
+import { Admin, Organisation } from '../generated/prisma/client'
 import { AdminRepository } from '../repositories/admin.repository'
 import { AppError } from '../middleware/error.middleware'
 import { generateTokens, verifyRefreshToken } from '../lib/jwt'
@@ -15,8 +15,8 @@ export class AuthService {
     email: string
     password: string
     phone: string
-  }): Promise<{ admin: SafeAdmin; tokens: AuthTokens }> {
-    
+  }): Promise<{ admin: SafeAdmin; tokens: AuthTokens; organisations: Organisation[] }> {
+
     const existing = await this.adminRepo.findByEmail(data.email)
     if (existing) {
       throw new AppError('An account with this email already exists', 409)
@@ -44,17 +44,19 @@ export class AuthService {
     // generate tokens
     const payload: JwtPayload = { adminId: admin.id, email: admin.email, phone: admin.phone }
     const tokens = generateTokens(payload)
+    const organisations = await this.adminRepo.getOrganisationsByAdminId(admin.id)
 
     return {
       admin: this.sanitize(admin),
-      tokens
+      tokens,
+      organisations
     }
   }
 
     async login(data: {
     phone: string
     password: string
-  }): Promise<{ admin: SafeAdmin; tokens: AuthTokens }> {
+  }): Promise<{ admin: SafeAdmin; tokens: AuthTokens; organisations: Organisation[] }> {
     const admin = await this.adminRepo.findByPhone(data.phone)
     if (!admin) throw new AppError('Invalid phone number or password', 401)
 
@@ -62,8 +64,18 @@ export class AuthService {
     if (!isValid) throw new AppError('Invalid phone number or password', 401)
 
     const tokens = generateTokens({ adminId: admin.id, email: admin.email, phone: admin.phone })
+    const organisations = await this.adminRepo.getOrganisationsByAdminId(admin.id)
 
-    return { admin: this.sanitize(admin), tokens }
+    return { admin: this.sanitize(admin), tokens, organisations }
+  }
+
+  async getAdminWithOrganisations(adminId: string) {
+    const admin = await this.adminRepo.findById(adminId)
+    if (!admin) throw new AppError('Admin not found', 404)
+
+    const organisations = await this.adminRepo.getOrganisationsByAdminId(adminId)
+
+    return { admin: this.sanitize(admin), organisations }
   }
 
 async refresh(refreshToken: string): Promise<AuthTokens> {

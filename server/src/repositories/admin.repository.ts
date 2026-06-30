@@ -22,4 +22,10 @@ export class AdminRepository {
   async update(id: string, data: Prisma.AdminUpdateInput): Promise<Admin> {
     return prisma.admin.update({ where: { id }, data })
   }
+
+  async getOrganisationsByAdminId(adminId: string) {
+    return prisma.organisation.findMany({
+      where: { adminId }
+    })
+  }
 }

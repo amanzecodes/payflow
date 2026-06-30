@@ -97,8 +97,3 @@ export const getInviteCode = async (
   }>(`/organisations/${orgId}/invite-code`);
   return data.data;
 };
-
-export const getDashboardOverview = async (orgId: string) => {
-  const { data } = await apiClient.get(`/dashboard/${orgId}/overview`);
-  return data.data;
-};

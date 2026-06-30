@@ -19,22 +19,23 @@ const LoginPage = () => {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const login = useLogin();
+  const login = useLogin({
+    onSuccess: () => {
+      router.push("/dashboard");
+    },
+    onError: (err) => {
+      setError(getApiErrorMessage(err, "An unexpected error occurred"));
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
     const validationError = validateLoginForm({ phone, password });
     if (validationError) return setError(validationError);
 
-    try {
-      await login.mutateAsync({ phone: `+234${phone}`, password, remember });
-      await new Promise(resolve => setTimeout(resolve, 500));
-      router.push("/onboarding");
-    } catch (err) {
-      setError(getApiErrorMessage(err, "An unexpected error occurred"));
-    }
+    login.mutate({ phone: `+234${phone}`, password, remember });
   };
 
   return (
