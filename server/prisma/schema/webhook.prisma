@@ -7,7 +7,11 @@ model WebhookEvent {
   payload       Json
   processed     Boolean   @default(false)
   processedAt   DateTime?
+  reconciliationStatus WebhookReconciliationStatus?
   createdAt     DateTime  @default(now())
+
+  @@index([txRef])
+  @@index([processed])
 
   @@map("webhook_events")
 }
