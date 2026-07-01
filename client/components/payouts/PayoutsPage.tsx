@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-import { AVAILABLE_BALANCE, DESTINATION_ACCOUNT, MOCK_PAYOUTS } from "./data";
+import { usePayoutPage } from "@/hooks/payouts/use-payout-page";
+import { useOnboardingStore } from "@/lib/store/onboarding.store";
 import RequestPayoutCard from "./RequestPayoutCard";
 import ConfirmPayoutModal from "./ConfirmPayoutModal";
 import PayoutHistoryTable from "./PayoutHistoryTable";
@@ -11,36 +13,93 @@ import type { PayoutRecord } from "./types";
 const ZERO_BALANCE = "₦0.00";
 
 const PayoutsPage = () => {
-  const [balance, setBalance] = useState(AVAILABLE_BALANCE);
-  const [payouts, setPayouts] = useState<PayoutRecord[]>(MOCK_PAYOUTS);
+  const router = useRouter();
+  const orgId = useOnboardingStore((state) => state.orgId);
+  const hasHydrated = useOnboardingStore((state) => state._hasHydrated);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [balance, setBalance] = useState(ZERO_BALANCE);
+
+  useEffect(() => {
+    if (hasHydrated && !orgId) {
+      router.push("/onboarding");
+    }
+  }, [hasHydrated, orgId, router]);
+
+  const { data: payoutData, isLoading } = usePayoutPage(orgId!);
+
+  const payouts: PayoutRecord[] = payoutData?.payouts?.map((payout) => ({
+    id: payout.id,
+    date: new Date(payout.createdAt).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    }),
+    amount: new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    }).format(payout.amount),
+    bank: payout.bankName,
+    accountLast4: payout.bankAccount.slice(-4),
+    reference: payout.transferRef || "N/A",
+    status: payout.status === "COMPLETED" ? "Completed" : payout.status === "PENDING" ? "Pending" : "Failed",
+  })) ?? [];
+
+  const availableBalance = payoutData?.balance?.available ?? 0;
+  const formattedBalance = new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 0,
+  }).format(availableBalance);
+
+  const destinationAccount = payoutData?.payoutDestination
+    ? {
+        bankName: payoutData.payoutDestination.bankName,
+        accountLast4: payoutData.payoutDestination.last4,
+      }
+    : {
+        bankName: "Account",
+        accountLast4: "****",
+      };
 
   const handleConfirm = async () => {
-    // Simulates the Nomba Transfer API call
+    // TODO: Integrate with actual payout request API
     await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    const payoutId = `PO-${Date.now()}`;
-    const newPayout: PayoutRecord = {
-      id: payoutId,
-      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-      amount: balance,
-      bank: DESTINATION_ACCOUNT.bankName,
-      accountLast4: DESTINATION_ACCOUNT.accountLast4,
-      reference: `PYT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-      status: "Pending",
-    };
-
-    setPayouts((prev) => [newPayout, ...prev]);
     setBalance(ZERO_BALANCE);
     setIsModalOpen(false);
-
-    // Mirrors the async settlement webhook flipping the payout to Completed
-    setTimeout(() => {
-      setPayouts((prev) =>
-        prev.map((payout) => (payout.id === payoutId ? { ...payout, status: "Completed" } : payout))
-      );
-    }, 2200);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="border-b border-zinc-200 pb-6">
+          <div className="h-8 w-48 bg-zinc-200 rounded animate-pulse mb-2" />
+          <div className="h-4 w-96 bg-zinc-100 rounded animate-pulse" />
+        </div>
+
+        {/* Request Card Skeleton */}
+        <div className="p-6 rounded-xl bg-white border border-zinc-200">
+          <div className="space-y-4">
+            <div className="h-5 w-32 bg-zinc-200 rounded animate-pulse" />
+            <div className="h-12 w-full bg-zinc-200 rounded animate-pulse" />
+            <div className="h-12 w-full bg-zinc-100 rounded animate-pulse" />
+          </div>
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="p-6 rounded-xl bg-white border border-zinc-200">
+          <div className="h-5 w-32 bg-zinc-200 rounded animate-pulse mb-4" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-12 bg-zinc-100 rounded animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -54,10 +113,13 @@ const PayoutsPage = () => {
 
       {/* Request Payout */}
       <RequestPayoutCard
-        balance={balance}
-        destination={DESTINATION_ACCOUNT}
-        disabled={balance === ZERO_BALANCE}
-        onWithdraw={() => setIsModalOpen(true)}
+        balance={formattedBalance}
+        destination={destinationAccount}
+        disabled={availableBalance === 0}
+        onWithdraw={() => {
+          setBalance(formattedBalance);
+          setIsModalOpen(true);
+        }}
       />
 
       {/* Payout History */}
@@ -69,7 +131,7 @@ const PayoutsPage = () => {
       <ConfirmPayoutModal
         open={isModalOpen}
         amount={balance}
-        destination={DESTINATION_ACCOUNT}
+        destination={destinationAccount}
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirm}
       />

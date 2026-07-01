@@ -1,3 +1,5 @@
+import { Payout } from "../generated/prisma/client"
+
 export interface PaginationOptions {
   page?: number
   limit?: number
@@ -72,4 +74,17 @@ export const CYCLE_TYPES: Record<string, string> = {
   '3': 'YEARLY',
   '4': 'TERMLY',
   '5': 'ONE_TIME'
+}
+export interface PayoutPageData {
+  balance: {
+    totalCollected: number
+    totalPayouts: number
+    available: number
+  }
+  payouts: Payout[]
+  payoutDestination: {
+    bankName: string
+    bankAccount: string
+    last4: string
+  }
 }
