@@ -78,12 +78,47 @@ const MembersPage = () => {
   if (!hasHydrated || isLoading) {
     return (
       <div className="space-y-6">
+        {/* Header Skeleton */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-zinc-200 pb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Members</h1>
-            <p className="text-sm text-zinc-500 mt-2.5 max-w-xl leading-relaxed">
-              Loading members...
-            </p>
+          <div className="flex-1">
+            <div className="h-8 w-48 bg-zinc-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-96 bg-zinc-100 rounded animate-pulse" />
+          </div>
+          <div className="h-11 w-32 bg-zinc-200 rounded animate-pulse shrink-0" />
+        </div>
+
+        {/* Workspace Skeleton */}
+        <div className="p-6 rounded-xl bg-white border border-zinc-200 space-y-6">
+          {/* Filter Bar Skeleton */}
+          <div className="space-y-4">
+            <div className="h-10 w-full bg-zinc-100 rounded animate-pulse" />
+            <div className="flex gap-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-9 w-24 bg-zinc-100 rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
+
+          {/* Table Skeleton */}
+          <div className="space-y-3">
+            {/* Table Headers */}
+            <div className="flex gap-4 px-4 py-3 border-b border-zinc-100">
+              <div className="h-4 w-32 bg-zinc-200 rounded animate-pulse" />
+              <div className="h-4 w-24 bg-zinc-200 rounded animate-pulse" />
+              <div className="h-4 w-20 bg-zinc-200 rounded animate-pulse" />
+            </div>
+
+            {/* Table Rows */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex gap-4 px-4 py-4 border-b border-zinc-100 last:border-0">
+                <div className="flex-1">
+                  <div className="h-4 w-32 bg-zinc-200 rounded animate-pulse mb-2" />
+                  <div className="h-3 w-24 bg-zinc-100 rounded animate-pulse" />
+                </div>
+                <div className="h-4 w-20 bg-zinc-200 rounded animate-pulse" />
+                <div className="h-6 w-16 bg-zinc-100 rounded animate-pulse" />
+              </div>
+            ))}
           </div>
         </div>
       </div>

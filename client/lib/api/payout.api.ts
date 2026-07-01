@@ -3,7 +3,7 @@ import { apiClient } from "./client"
 
 export const getPayoutPageData = async (orgId: string): Promise<PayoutPageData> => {
   const response = await apiClient.get<{ data: PayoutPageData }>(
-    `/organisations/${orgId}/members/payout-page`
+    `/organisations/${orgId}/payouts/payout-page`
   )
   return response.data.data
 }
