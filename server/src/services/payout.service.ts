@@ -1,10 +1,13 @@
-import { Payout } from '../generated/prisma/client'
 import { PayoutRepository } from '../repositories/payout.repository'
 import { OrganisationRepository } from '../repositories/organisation.repository'
 import { ChargeRepository } from '../repositories/charge.repository'
 import { PaymentProvider } from '../providers/PaymentProviders'
 import { AppError } from '../middleware/error.middleware'
 import { logger } from '../lib/logger'
+import { Payout } from '../generated/prisma/client'
+import { PayoutPageData } from '../types'
+
+
 
 export class PayoutService {
   constructor(
@@ -15,11 +18,9 @@ export class PayoutService {
   ) {}
 
   async requestPayout(orgId: string, amount: number): Promise<Payout> {
-    // 1. confirm org exists
     const org = await this.orgRepo.findById(orgId)
     if (!org) throw new AppError('Organisation not found', 404)
 
-    // 2. calculate available balance
     const totalCollected = await this.chargeRepo.getTotalPaidByOrg(orgId)
     const totalPayouts = await this.payoutRepo.getTotalCompletedByOrg(orgId)
     const available = totalCollected - totalPayouts
@@ -28,7 +29,6 @@ export class PayoutService {
       `[PayoutService] Payout request — org: ${org.name}, requested: ₦${amount}, available: ₦${available}`
     )
 
-    // 3. check sufficient balance
     if (amount <= 0) {
       throw new AppError('Payout amount must be greater than zero', 400)
     }
@@ -40,8 +40,6 @@ export class PayoutService {
       )
     }
 
-    // 4. create payout record as PENDING before calling provider
-    // this ensures we have a record even if the transfer call fails
     const payout = await this.payoutRepo.create({
       amount,
       status: 'PENDING',
@@ -52,14 +50,12 @@ export class PayoutService {
     })
 
     try {
-      // 5. call payment provider — mock now, Nomba Transfer API on June 30
-      const { transferRef, status } = await this.paymentProvider.transferToBank(
+      const { transferRef } = await this.paymentProvider.transferToBank(
         amount,
         org.payoutBankAccount,
         org.payoutBankCode
       )
 
-      // 6. mark completed with transfer reference
       const completed = await this.payoutRepo.markCompleted(payout.id, transferRef)
 
       logger.info(
@@ -68,15 +64,9 @@ export class PayoutService {
 
       return completed
     } catch (error) {
-      // 7. mark failed if provider call errors
       await this.payoutRepo.markFailed(payout.id)
-
       logger.error(`[PayoutService] Payout failed for org ${orgId}: ${error}`)
-
-      throw new AppError(
-        'Payout failed — please try again or contact support',
-        500
-      )
+      throw new AppError('Payout failed — please try again or contact support', 500)
     }
   }
 
@@ -109,6 +99,26 @@ export class PayoutService {
       totalCollected,
       totalPayouts,
       available: totalCollected - totalPayouts
+    }
+  }
+
+  async getPayoutPage(orgId: string): Promise<PayoutPageData> {
+    const org = await this.orgRepo.findById(orgId)
+    if (!org) throw new AppError('Organisation not found', 404)
+
+    const [balance, payouts] = await Promise.all([
+      this.getAvailableBalance(orgId),
+      this.payoutRepo.findAllByOrg(orgId)
+    ])
+
+    return {
+      balance,
+      payouts,
+      payoutDestination: {
+        bankName: org.payoutBankName,
+        bankAccount: org.payoutBankAccount,
+        last4: org.payoutBankAccount.slice(-4)
+      }
     }
   }
 }

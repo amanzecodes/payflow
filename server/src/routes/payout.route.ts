@@ -18,6 +18,11 @@ const payoutController = new PayoutController(payoutService)
 router.use(authenticate)
 router.use(requireOrgAccess)
 
+router.get(
+  '/payout-page',
+  (req, res, next) => payoutController.getPayoutPage(req, res, next)
+)
+
 router.post(
   '/',
   (req, res, next) => payoutController.requestPayout(req, res, next)
