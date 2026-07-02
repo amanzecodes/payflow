@@ -1,4 +1,4 @@
-import { WebhookEvent, Prisma } from '../generated/prisma/client'
+import { WebhookEvent, WebhookReconciliationStatus, Prisma } from '../generated/prisma/client'
 import { prisma } from '../lib/prisma'
 
 export class WebhookRepository {
@@ -17,6 +17,20 @@ export class WebhookRepository {
     return prisma.webhookEvent.update({
       where: { id },
       data: { processed: true, processedAt: new Date() }
+    })
+  }
+
+  async markProcessedWithStatus(
+    id: string,
+    reconciliationStatus: WebhookReconciliationStatus
+  ): Promise<WebhookEvent> {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        processed: true,
+        processedAt: new Date(),
+        reconciliationStatus
+      }
     })
   }
 }
