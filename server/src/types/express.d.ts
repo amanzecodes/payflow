@@ -5,6 +5,7 @@ declare global {
         interface Request {
             admin?: Omit<Admin, 'password'>
             org?: Organisation
+            rawBody?:string
         }
     }
 }
