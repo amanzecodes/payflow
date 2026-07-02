@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from 'helmet'
 import { requestLogger } from "./middleware/logger.middleware";
@@ -8,7 +8,12 @@ import { router } from "./routes";
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({
+  verify(req: Request, res: Response, buf: Buffer) {
+    req.rawBody = buf.toString('utf-8')
+  },
+}));
+
 app.use(express.urlencoded({ extended: true }))
 
 
@@ -23,7 +28,6 @@ app.use(helmet())
 const isDevelopment = process.env.NODE_ENV !== 'production'
 const corsOrigin = isDevelopment
   ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // In development, allow localhost, 127.0.0.1, and any IP pattern
       const allowedPatterns = [
         /^http:\/\/localhost(:\d+)?$/,
         /^http:\/\/127\.0\.0\.1(:\d+)?$/,
@@ -40,7 +44,6 @@ const corsOrigin = isDevelopment
       }
     }
   : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // In production, allow configured URLs and Vercel deployments
       const allowedUrls = [
         process.env.CLIENT_URL || 'https://payflow-lemon.vercel.app',
         'https://payflow-lemon.vercel.app',
