@@ -7,10 +7,16 @@ const envSchema = z.object({
   PROVIDER: z.enum(['mock', 'nomba']).default('mock'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
+  CLIENT_URL: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_NUMBER: z.string().optional(),
-  WEBHOOK_BASE_URL: z.string()
+  WEBHOOK_BASE_URL: z.string(),
+  NOMBA_CLIENT_ID: z.string(),
+  NOMBA_CLIENT_SECRET: z.string(),
+  NOMBA_BASE_URL: z.string(),
+  NOMBA_ACCOUNT_ID: z.string(),
+  NOMBA_WEBHOOK_SECRET: z.string().optional()
 })
 
 const parsed = envSchema.safeParse(process.env)
