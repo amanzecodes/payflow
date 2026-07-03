@@ -388,6 +388,72 @@ async lookupBankAccountPublic(
     }
   }
 
+  async refundOverpayment(
+  amount: number,
+  accountNumber: string,
+  bankCode: string,
+  senderName: string,
+  originalTxRef: string
+): Promise<TransferResult> {
+  logger.info(
+    `[NombaProvider] Initiating overpayment refund of ₦${amount} to ${accountNumber} — original txRef: ${originalTxRef}`
+  )
+
+  const headers = await this.buildHeaders()
+
+  // look up account name before transfer
+  const accountName = await this.lookupBankAccountPublic(accountNumber, bankCode)
+
+  // unique ref tied to original transaction for traceability
+  const merchantTxRef = `REFUND-${originalTxRef.slice(-8).toUpperCase()}-${Date.now()}`
+
+  const response = await fetch(`${this.baseUrl}/v2/transfers/bank`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      amount,
+      accountNumber,
+      accountName,
+      bankCode,
+      merchantTxRef,
+      senderName: 'PayFlow',
+      narration: `Overpayment refund - orig: ${originalTxRef.slice(-8)}`
+    })
+  })
+
+  const result = (await response.json()) as NombaTransferResponse
+
+  if (response.status === 201) {
+    logger.info(
+      `[NombaProvider] Refund processing (201) — ref: ${merchantTxRef}`
+    )
+    return { transferRef: merchantTxRef, status: 'PROCESSING' }
+  }
+
+  if (!response.ok) {
+    logger.error(
+      `[NombaProvider] Refund transfer failed [${response.status}]: ${JSON.stringify(result)}`
+    )
+    throw new Error(
+      `Refund transfer failed: ${result.description || response.status}`
+    )
+  }
+
+  if (result.data?.status === 'REFUND') {
+    throw new Error('Refund transfer was itself refunded. Please retry.')
+  }
+
+  logger.info(
+    `[NombaProvider] Refund initiated — ref: ${merchantTxRef}, status: ${result.data?.status}`
+  )
+
+  return {
+    transferRef: merchantTxRef,
+    status: result.data?.status || 'PROCESSING'
+  }
+}
+
+
 
   async getBankList(): Promise<Array<{ code: string; name: string }>> {
     logger.info("[NombaProvider] Fetching bank list...");

@@ -28,28 +28,21 @@ export interface NombaMerchant {
 }
 
 export interface NombaTransaction {
-  // virtual account payment fields
-  aliasAccountNumber?: string      // the VA number — used for reconciliation
+  aliasAccountNumber?: string      
   aliasAccountName?: string
-  aliasAccountType?: string        // "VIRTUAL" for VA payments
+  aliasAccountType?: string        
   aliasAccountReference?: string
-
-  // common fields
-  transactionId: string            // unique transaction ID
-  transactionAmount: number        // amount received
+  transactionId: string
+  transactionAmount: number
   fee?: number
   sessionId?: string
-  type: string                     // "vact_transfer" | "transfer" | "purchase"
+  type: string         
   narration?: string
-  time: string                     // RFC-3339 timestamp
+  time: string         
   responseCode?: string
   responseCodeMessage?: string
-  originatingFrom?: string         // "api" | "pos"
-
-  // payout specific fields
+  originatingFrom?: string
   merchantTxRef?: string
-
-  // pos specific fields
   terminalSerialNumber?: string
   cardIssuer?: string
   rrn?: string
@@ -101,6 +94,14 @@ export interface PaymentProvider {
     accountNumber: string,
     bankCode: string
   ): Promise<string>
+
+  refundOverpayment(
+    amount: number,
+    accountNumber: string,
+    bankCode: string,
+    senderName: string,
+    originalTxRef: string
+  ): Promise<TransferResult>
 
   verifyWebhookSignature(
     headers: Record<string, string>,
