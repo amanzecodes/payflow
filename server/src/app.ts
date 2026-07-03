@@ -70,7 +70,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.use('/api/v1', router)
+app.use('/api', router)
 app.use(errorMiddleware)
 
 export default app;
