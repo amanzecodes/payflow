@@ -7,7 +7,7 @@ export async function markOverdueCharges(): Promise<void> {
   try {
     const result = await prisma.charge.updateMany({
       where: {
-        status: 'PENDING',
+        status: { in: ['PENDING', 'UNDERPAID']},
         cycle: {
           dueDate: { lt: new Date() }
         }

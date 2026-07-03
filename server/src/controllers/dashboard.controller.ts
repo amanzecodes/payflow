@@ -32,12 +32,17 @@ export class DashboardController {
 
     const charges = currentCycle?.charges ?? []
 
-    const paidCharges = charges.filter(c => c.status === 'PAID')
-    const pendingCharges = charges.filter(c => c.status === 'PENDING')
+    const paidCharges = charges.filter(c => c.status === 'PAID' || c.status === 'OVERPAID')
+    const pendingCharges = charges.filter(c => c.status === 'PENDING' || c.status === 'UNDERPAID')
     const overdueCharges = charges.filter(c => c.status === 'OVERDUE')
 
     const totalCollectedThisCycle = paidCharges.reduce((sum, c) => sum + c.amount, 0)
-    const outstandingThisCycle = pendingCharges.reduce((sum, c) => sum + c.amount, 0)
+    const outstandingThisCycle = pendingCharges.reduce((sum, c) => {
+      if(c.status === 'UNDERPAID') {
+        return sum + (c.amount - c.paidSoFar)
+      }
+      return sum + c.amount
+    }, 0)
 
     // sort: overdue first, then pending, then paid
     const statusOrder: Record<string, number> = { OVERDUE: 0, PENDING: 1, PAID: 2 }
