@@ -1,43 +1,36 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import { WebhookService } from '../services/webhook.service'
 import { paymentProvider } from '../providers'
-import { AppError } from '../middleware/error.middleware'
-import { env } from '../config/env'
+import { logger } from '../lib/logger'
+import { NombaWebhookPayload } from '../providers/PaymentProviders'
 
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
-  async handleNomba(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async handleNomba(req: Request, res: Response): Promise<void> {
     try {
-      // verify signature
-      const isValid = paymentProvider.verifyWebhookSignature(req.body, req.headers as any)
-      if (!isValid) throw new AppError('Invalid webhook signature', 403)
+      const isValid = paymentProvider.verifyWebhookSignature(
+        req.headers as Record<string, string>,
+        req.rawBody || ''
+      )
 
-      // acknowledge immediately
+      if (!isValid) {
+        logger.warn('[WebhookController] Invalid signature — rejecting')
+        res.status(403).json({ success: false, error: 'Invalid webhook signature' })
+        return
+      }
+
+      await this.webhookService.processNombaWebhook(
+        req.body as NombaWebhookPayload
+      )
+
       res.status(200).json({ received: true })
 
-      // process asynchronously
-      await this.webhookService.processNombaWebhook(req.body)
     } catch (error) {
-      next(error)
-    }
-  }
-
-  async handleTest(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      if (env.PROVIDER !== 'mock') {
-        throw new AppError('Test endpoint only available in mock mode', 403)
+      logger.error(`[WebhookController] Webhook processing failed: ${error}`)
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Processing failed' })
       }
-
-      const { accountRef, amount } = req.body
-      if (!accountRef || !amount) {
-        throw new AppError('accountRef and amount are required', 400)
-      }
-
-      await this.webhookService.processTestWebhook(accountRef, amount)
-      res.status(200).json({ success: true, message: 'Test payment processed' })
-    } catch (error) {
-      next(error)
     }
   }
 }

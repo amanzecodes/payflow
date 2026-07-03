@@ -13,15 +13,10 @@ const chargeRepo = new ChargeRepository()
 const webhookService = new WebhookService(webhookRepo, memberRepo, chargeRepo)
 const webhookController = new WebhookController(webhookService)
 
-// no auth — signature verification handles security
-router.post(
-  '/nomba',
-  (req, res, next) => webhookController.handleNomba(req, res, next)
-)
 
 router.post(
-  '/nomba/test',
-  (req, res, next) => webhookController.handleTest(req, res, next)
+  '/nomba',
+  (req, res) => webhookController.handleNomba(req, res)
 )
 
 export default router
