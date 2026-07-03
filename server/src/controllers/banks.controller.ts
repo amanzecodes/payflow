@@ -1,30 +1,32 @@
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
+import { paymentProvider } from '../providers'
+import { AppError } from '../middleware/error.middleware'
+import { logger } from '../lib/logger'
 
-const NIGERIAN_BANKS = [
-  { name: 'Access Bank', code: '044' },
-  { name: 'Zenith Bank', code: '057' },
-  { name: 'Guaranty Trust Bank', code: '058' },
-  { name: 'First Bank of Nigeria', code: '011' },
-  { name: 'United Bank for Africa', code: '033' },
-  { name: 'Wema Bank', code: '035' },
-  { name: 'Polaris Bank', code: '076' },
-  { name: 'Standard Chartered Bank', code: '068' },
-  { name: 'FCMB Group', code: '070' },
-  { name: 'Stanbic IBTC Bank', code: '221' },
-  { name: 'Union Bank of Nigeria', code: '032' },
-  { name: 'Fidelity Bank', code: '070' },
-]
-
-const verifyAccountSchema = z.object({
-  accountNumber: z.string().length(10, 'Account number must be 10 digits'),
-  bankCode: z.string().min(1),
-})
+//cache the bank list
+let bankListCache: Array<{ code: string; name: string }> | null = null
+let bankListCachedAt: number = 0
+const CACHE_TTL_MS = 60 * 60 * 1000 //1 hour
 
 export class BanksController {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.status(200).json({ success: true, data: NIGERIAN_BANKS })
+      const now = Date.now()
+
+      if (bankListCache && now - bankListCachedAt < CACHE_TTL_MS) {
+        logger.info('[BanksController] Returning cached bank list')
+        res.json({ success: true, data: bankListCache })
+        return
+      }
+
+      const banks = await paymentProvider.getBankList()
+
+      bankListCache = banks
+      bankListCachedAt = now
+
+      logger.info(`[BanksController] Fetched and cached ${banks.length} banks`)
+
+      res.json({ success: true, data: banks })
     } catch (error) {
       next(error)
     }
@@ -32,25 +34,33 @@ export class BanksController {
 
   async verify(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { accountNumber, bankCode } = verifyAccountSchema.parse(req.body)
+      const { accountNumber, bankCode } = req.body
 
-      // Mock verification — in production, call Nomba's resolve API
-      // For now, generate a plausible name based on account number hash
-      const nameOptions = [
-        'John Doe Ltd',
-        'Sarah Smith Trading',
-        'ABC Holdings',
-        'Business Ventures Co',
-        'Enterprise Solutions',
-        'Tech Innovations Ltd',
-      ]
-      const idx = parseInt(accountNumber.slice(-1)) % nameOptions.length
-      const accountName = nameOptions[idx]
+      if (!accountNumber || !bankCode) {
+        throw new AppError('accountNumber and bankCode are required', 400)
+      }
 
-      res.status(200).json({
-        success: true,
-        data: { accountName }
-      })
+      if (!/^\d{10}$/.test(accountNumber)) {
+        throw new AppError('Account number must be exactly 10 digits', 400)
+      }
+
+      const accountName = await paymentProvider.lookupBankAccountPublic(
+        accountNumber,
+        bankCode
+      )
+
+      if (!accountName || accountName === 'Account Holder') {
+        throw new AppError(
+          'Could not verify account. Please check the details and try again.',
+          400
+        )
+      }
+
+      logger.info(
+        `[BanksController] Account verified — ${accountNumber} → ${accountName}`
+      )
+
+      res.json({ success: true, data: { accountName, accountNumber } })
     } catch (error) {
       next(error)
     }
