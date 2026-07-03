@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "charges" ADD COLUMN     "paidSoFar" DOUBLE PRECISION NOT NULL DEFAULT 0;

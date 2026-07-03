@@ -1,16 +1,17 @@
 model Charge {
-  id          String        @id @default(cuid())
-  memberId    String
-  cycleId     String
-  amount      Float
-  status      ChargeStatus  @default(PENDING)
-  paidAt      DateTime?
-  txRef       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id        String       @id @default(cuid())
+  memberId  String
+  cycleId   String
+  amount    Float
+  paidSoFar Float        @default(0)
+  status    ChargeStatus @default(PENDING)
+  paidAt    DateTime?
+  txRef     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  cycle       Cycle     @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  cycle  Cycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, cycleId])
   @@map("charges")
