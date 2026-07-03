@@ -27,6 +27,8 @@ export interface ConversationContext {
   pendingMemberIdentifier?: string;
   pendingBankAccount?: string;
   pendingBankCode?: string;
+  popularBankCodes?: string[]
+  awaitingBankSelection?: boolean
   selectedFeeLineIds?: string[];
   webEmail?: string
 }
