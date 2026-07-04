@@ -16,7 +16,8 @@ const envSchema = z.object({
   NOMBA_CLIENT_SECRET: z.string(),
   NOMBA_BASE_URL: z.string(),
   NOMBA_ACCOUNT_ID: z.string(),
-  NOMBA_WEBHOOK_SECRET: z.string().optional()
+  NOMBA_WEBHOOK_SECRET: z.string().optional(),
+  NOMBA_SUB_ACCOUNT_ID: z.string().optional()
 })
 
 const parsed = envSchema.safeParse(process.env)
