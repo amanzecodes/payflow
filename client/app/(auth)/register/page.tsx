@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HiOutlineUser, HiOutlineMail, HiOutlineLockClosed } from "react-icons/hi";
+import { toast } from "sonner";
 
 import { AuthAside } from "@/components/auth/AuthAside";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { useRegister } from "@/hooks/auth/use-register";
 import { getApiErrorMessage } from "@/lib/api/error";
-import { validateRegisterForm } from "@/lib/validation/auth.validation";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const RegisterPage = () => {
@@ -17,25 +17,20 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const register = useRegister();
   const resetOnboarding = useOnboardingStore((state) => state.reset);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    const validationError = validateRegisterForm({ name, email, phone, password });
-    if (validationError) return setError(validationError);
 
     try {
       await register.mutateAsync({ name, email, phone: `+234${phone}`, password });
       resetOnboarding();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success("Account created! Setting up your workspace…");
       router.push("/onboarding");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Registration failed"));
+      toast.error(getApiErrorMessage(err, "Registration failed"));
     }
   };
 
@@ -87,7 +82,7 @@ const RegisterPage = () => {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full rounded-lg border px-4 py-3.5 pl-11 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:shadow-[inset_0_0_0_2px_rgba(11,121,255,0.35)] focus:border-transparent transition-all"
                   placeholder="Jane Doe"
-                  aria-invalid={!!error}
+                  aria-invalid={register.isError}
                   required
                 />
               </div>
@@ -111,7 +106,7 @@ const RegisterPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-lg border px-4 py-3.5 pl-11 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:shadow-[inset_0_0_0_2px_rgba(11,121,255,0.35)] focus:border-transparent transition-all"
                   placeholder="name@company.com"
-                  aria-invalid={!!error}
+                  aria-invalid={register.isError}
                   required
                 />
               </div>
@@ -124,7 +119,7 @@ const RegisterPage = () => {
               >
                 Business Phone Number
               </label>
-              <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={!!error} />
+              <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={register.isError} />
             </div>
 
             <div className="mb-5">
@@ -145,17 +140,11 @@ const RegisterPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border px-4 py-3.5 pl-11 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:shadow-[inset_0_0_0_2px_rgba(11,121,255,0.35)] focus:border-transparent transition-all"
                   placeholder="At least 8 characters"
-                  aria-invalid={!!error}
+                  aria-invalid={register.isError}
                   required
                 />
               </div>
             </div>
-
-            {error && (
-              <div className="mb-5 p-3.5 rounded-lg bg-destructive/10 text-sm font-medium text-destructive border border-destructive/20">
-                {error}
-              </div>
-            )}
 
             <div className="mb-6">
               <button

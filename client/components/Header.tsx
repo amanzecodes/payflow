@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Button from './Button'
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -34,7 +36,7 @@ const Header = () => {
           </a>
         </nav>
 
-        <Button variant='primary'>
+        <Button variant='primary' onClick={() => router.push('/login')}>
           Get Started
         </Button>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { HiChevronDown, HiOutlineArrowRightOnRectangle, HiOutlineUserCircle } from "react-icons/hi2";
 import { fetchCurrentAdmin, logoutRequest } from "@/lib/api/auth.api";
 import type { Admin } from "@/types/auth.types";
@@ -61,9 +62,10 @@ const ProfileMenu = () => {
   const handleLogout = async () => {
     try {
       await logoutRequest();
+      toast.success("Signed out successfully");
       router.push("/login");
     } catch (error) {
-      console.error("Logout failed:", error);
+      toast.error("Logout failed, redirecting…");
       router.push("/login");
     }
   };

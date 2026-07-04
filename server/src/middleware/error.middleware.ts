@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
+import { ZodError } from 'zod'
 import { logger } from '../lib/logger'
 
 export class AppError extends Error {
@@ -21,6 +22,14 @@ export function errorMiddleware(
     res.status(err.statusCode).json({
       success: false,
       error: err.message
+    })
+    return
+  }
+
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      success: false,
+      error: err.issues[0]?.message ?? 'Invalid request data'
     })
     return
   }

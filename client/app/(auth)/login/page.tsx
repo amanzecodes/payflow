@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HiOutlineLockClosed } from "react-icons/hi";
+import { toast } from "sonner";
 
 import { AuthAside } from "@/components/auth/AuthAside";
 import { PhoneInput } from "@/components/auth/PhoneInput";
@@ -10,31 +11,25 @@ import { RotatingCopy } from "@/components/auth/RotatingCopy";
 import { LOGIN_ROTATING_TEXTS } from "@/constants/auth.constants";
 import { useLogin } from "@/hooks/auth/use-login";
 import { getApiErrorMessage } from "@/lib/api/error";
-import { validateLoginForm } from "@/lib/validation/auth.validation";
 
 const LoginPage = () => {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const login = useLogin({
     onSuccess: () => {
+      toast.success("Welcome back! Redirecting…");
       router.push("/dashboard");
     },
     onError: (err) => {
-      setError(getApiErrorMessage(err, "An unexpected error occurred"));
+      toast.error(getApiErrorMessage(err, "An unexpected error occurred"));
     },
   });
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-
-    const validationError = validateLoginForm({ phone, password });
-    if (validationError) return setError(validationError);
-
     login.mutate({ phone: `+234${phone}`, password, remember });
   };
 
@@ -65,7 +60,7 @@ const LoginPage = () => {
               >
                 Business Phone Number
               </label>
-              <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={!!error} />
+              <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={login.isError} />
             </div>
 
             <div className="mb-5">
@@ -86,7 +81,7 @@ const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border px-4 py-3.5 pl-11 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:shadow-[inset_0_0_0_2px_rgba(11,121,255,0.35)] focus:border-transparent transition-all"
                   placeholder="••••••••"
-                  aria-invalid={!!error}
+                  aria-invalid={login.isError}
                   required
                 />
               </div>
@@ -106,12 +101,6 @@ const LoginPage = () => {
                 Forgot credentials?
               </a>
             </div>
-
-            {error && (
-              <div className="mb-5 p-3.5 rounded-lg bg-destructive/10 text-sm font-medium text-destructive border border-destructive/20">
-                {error}
-              </div>
-            )}
 
             <div className="mb-6">
               <button

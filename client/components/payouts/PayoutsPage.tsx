@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { usePayoutPage } from "@/hooks/payouts/use-payout-page";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
@@ -68,6 +69,7 @@ const PayoutsPage = () => {
     await new Promise((resolve) => setTimeout(resolve, 1200));
     setBalance(ZERO_BALANCE);
     setIsModalOpen(false);
+    toast.success("Payout request submitted successfully");
   };
 
   if (isLoading) {
