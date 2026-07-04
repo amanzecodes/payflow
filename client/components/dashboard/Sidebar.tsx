@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,9 +8,11 @@ import {
   HiOutlineSquares2X2,
   HiOutlineUserGroup,
   HiOutlineBanknotes,
-  HiOutlineCog6Tooth,
+  HiOutlineArrowsRightLeft,
   HiOutlineBars3,
   HiOutlineXMark,
+  HiChevronUpDown,
+  HiOutlineCheck,
 } from "react-icons/hi2";
 
 import CommandPalette from "@/components/command-palette/CommandPalette";
@@ -25,6 +27,7 @@ interface SidebarProps {
 const NAVIGATION_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: HiOutlineSquares2X2 },
   { name: "Members", href: "/members", icon: HiOutlineUserGroup },
+  { name: "Transactions", href: "/transactions", icon: HiOutlineArrowsRightLeft },
   { name: "Payouts", href: "/payout", icon: HiOutlineBanknotes },
   // { name: "Settings", href: "/settings", icon: HiOutlineCog6Tooth },
 ];
@@ -34,6 +37,8 @@ const Sidebar = ({ children }: SidebarProps) => {
   const { open, close, toggle } = useCommandPalette();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+  const orgMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkIsDesktop = () => {
@@ -43,6 +48,17 @@ const Sidebar = ({ children }: SidebarProps) => {
     checkIsDesktop();
     window.addEventListener("resize", checkIsDesktop);
     return () => window.removeEventListener("resize", checkIsDesktop);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (orgMenuRef.current && !orgMenuRef.current.contains(event.target as Node)) {
+        setOrgMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const closeSidebar = () => setSidebarOpen(false);
@@ -75,11 +91,57 @@ const Sidebar = ({ children }: SidebarProps) => {
         className="fixed lg:static inset-y-0 left-0 z-50 w-64 border-r border-zinc-200 bg-white flex flex-col justify-between px-4 py-10"
       >
         <div>
-          {/* Brand/Logo Area */}
-          <div className="flex items-center gap-3 mb-14 px-2.5">
-            <span className="font-bold text-lg tracking-tight text-zinc-900">
-              Payflow
-            </span>
+          {/* Organisation Selector */}
+          <div ref={orgMenuRef} className="relative mb-14">
+            <button
+              onClick={() => setOrgMenuOpen((prev) => !prev)}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-50 transition-colors"
+            >
+              <span className="h-7 w-7 rounded-lg bg-[#0b79ff] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                P
+              </span>
+              <span className="font-bold text-lg tracking-tight text-zinc-900 truncate">
+                Payflet
+              </span>
+              <HiChevronUpDown
+                size={16}
+                className="text-zinc-400 ml-auto shrink-0"
+              />
+            </button>
+
+            <AnimatePresence>
+              {orgMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute left-0 top-full mt-2 w-full min-w-[14rem] rounded-sm bg-white border border-zinc-200 shadow-sm overflow-hidden z-50"
+                >
+                  <div className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
+                    Payflet
+                  </div>
+                  <div className="flex items-center justify-between gap-2 px-4 py-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="h-6 w-6 rounded-md bg-[#0b79ff] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                        P
+                      </span>
+                      <span className="text-sm font-medium text-zinc-900 truncate">
+                        Payflet
+                      </span>
+                    </div>
+                    <HiOutlineCheck size={16} className="text-[#0b79ff] shrink-0" />
+                  </div>
+                  <Link
+                    href="/settings"
+                    onClick={() => setOrgMenuOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors border-t border-zinc-100"
+                  >
+                    Manage Payflet
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Navigation Items */}
