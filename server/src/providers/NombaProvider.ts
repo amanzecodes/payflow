@@ -502,7 +502,7 @@ export class NombaProvider implements PaymentProvider {
 
     const subAccountId = env.NOMBA_SUB_ACCOUNT_ID;
 
-     const url = `${this.baseUrl}/v1/accounts/${subAccountId}/virtual`
+     const url = `${this.baseUrl}/v1/accounts/virtual/${subAccountId}`
 
 
 
