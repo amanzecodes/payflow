@@ -4,7 +4,8 @@
       "Bash(npm install *)",
       "Bash(git reset *)",
       "Bash(git clean *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git config *)"
     ]
   }
 }
