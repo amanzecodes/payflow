@@ -494,59 +494,84 @@ async lookupBankAccountPublic(
   }
 
 
-  // ─── WEBHOOK SIGNATURE VERIFICATION ───────────────────────────────────────
 
   verifyWebhookSignature(
-    headers: Record<string, string>,
-    rawBody: string,
-  ): boolean {
-    const secret = env.NOMBA_WEBHOOK_SECRET;
+  headers: Record<string, string>,
+  rawBody: string
+): boolean {
+  const secret = env.NOMBA_WEBHOOK_SECRET
 
-    if (!secret) {
-      logger.error(
-        "[NombaProvider] NOMBA_WEBHOOK_SECRET not configured — rejecting all webhooks",
-      );
-      return false;
+  if (!secret) {
+    logger.error('[NombaProvider] NOMBA_WEBHOOK_SECRET not configured — rejecting')
+    return false
+  }
+
+  const receivedSignature = headers['nomba-signature']
+  const timestamp = headers['nomba-timestamp']
+
+  if (!receivedSignature) {
+    logger.warn('[NombaProvider] Missing nomba-signature header')
+    return false
+  }
+
+  if (!timestamp) {
+    logger.warn('[NombaProvider] Missing nomba-timestamp header')
+    return false
+  }
+
+  if (!rawBody) {
+    logger.warn('[NombaProvider] Raw body missing')
+    return false
+  }
+
+  try {
+    const requestPayload = JSON.parse(rawBody)
+    const data = requestPayload.data || {}
+    const merchant = data.merchant || {}
+    const transaction = data.transaction || {}
+
+    const eventType = requestPayload.event_type || ''
+    const requestId = requestPayload.requestId || ''
+    const userId = merchant.userId || ''
+    const walletId = merchant.walletId || ''
+    const transactionId = transaction.transactionId || ''
+    const transactionType = transaction.type || ''
+    const transactionTime = transaction.time || ''
+
+    
+    let transactionResponseCode = transaction.responseCode || ''
+    if (transactionResponseCode === 'null') {
+      transactionResponseCode = ''
     }
 
-    const receivedSignature = headers["nomba-signature"];
+    
+    const hashingPayload = `${eventType}:${requestId}:${userId}:${walletId}:${transactionId}:${transactionType}:${transactionTime}:${transactionResponseCode}:${timestamp}`
 
-    if (!receivedSignature) {
-      logger.warn("[NombaProvider] Missing nomba-signature header");
-      return false;
-    }
+    logger.info(`[NombaProvider] Hashing payload: ${hashingPayload}`)
 
-    if (!rawBody) {
-      logger.warn("[NombaProvider] Raw body missing — cannot verify signature");
-      return false;
-    }
-
+    
     const expectedSignature = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody, "utf8")
-      .digest("hex");
+      .createHmac('sha256', secret)
+      .update(hashingPayload)
+      .digest('base64')
 
-    // timing-safe comparison — prevents timing attacks
-    const received = Buffer.from(receivedSignature, "utf8");
-    const expected = Buffer.from(expectedSignature, "utf8");
+    logger.info(`[NombaProvider] Expected: ${expectedSignature}`)
+    logger.info(`[NombaProvider] Received: ${receivedSignature}`)
 
-    if (received.length !== expected.length) {
-      logger.warn("[NombaProvider] Webhook signature length mismatch");
-      return false;
-    }
-
-    const isValid = crypto.timingSafeEqual(received, expected);
+    
+    const isValid = expectedSignature.toLowerCase() === receivedSignature.toLowerCase()
 
     if (!isValid) {
-      logger.warn(
-        `[NombaProvider] Webhook signature verification failed — algorithm: HmacSHA256, version: ${headers["nomba-signature-version"] || "unknown"}`,
-      );
+      logger.warn('[NombaProvider] Webhook signature verification failed')
     } else {
-      logger.info(
-        `[NombaProvider] Webhook verified — timestamp: ${headers["nomba-timestamp"]}, version: ${headers["nomba-signature-version"]}`,
-      );
+      logger.info('[NombaProvider] Webhook signature verified successfully')
     }
 
-    return isValid;
+    return isValid
+
+  } catch (error) {
+    logger.error(`[NombaProvider] Signature verification error: ${error}`)
+    return false
   }
+}
 }
