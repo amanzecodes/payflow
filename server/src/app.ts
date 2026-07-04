@@ -10,7 +10,7 @@ const app = express();
 
 app.use(express.json({
   verify(req: Request, res: Response, buf: Buffer) {
-    req.rawBody = buf.toString('utf-8')
+    req.rawBody = buf.toString('utf8')
   },
 }));
 
