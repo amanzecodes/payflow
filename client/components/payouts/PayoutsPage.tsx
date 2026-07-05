@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { usePayoutPage } from "@/hooks/payouts/use-payout-page";
+import { usePayoutPage, useRequestPayout } from "@/hooks/payouts/use-payout-page";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
+import { getApiErrorMessage } from "@/lib/api/error";
 import RequestPayoutCard from "./RequestPayoutCard";
 import ConfirmPayoutModal from "./ConfirmPayoutModal";
 import PayoutHistoryTable from "./PayoutHistoryTable";
@@ -20,6 +21,7 @@ const PayoutsPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [balance, setBalance] = useState(ZERO_BALANCE);
+  const [pendingAmount, setPendingAmount] = useState(0);
 
   useEffect(() => {
     if (hasHydrated && !orgId) {
@@ -28,6 +30,7 @@ const PayoutsPage = () => {
   }, [hasHydrated, orgId, router]);
 
   const { data: payoutData, isLoading } = usePayoutPage(orgId!);
+  const requestPayout = useRequestPayout(orgId!);
 
   const payouts: PayoutRecord[] = payoutData?.payouts?.map((payout) => ({
     id: payout.id,
@@ -65,11 +68,14 @@ const PayoutsPage = () => {
       };
 
   const handleConfirm = async () => {
-    // TODO: Integrate with actual payout request API
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setBalance(ZERO_BALANCE);
-    setIsModalOpen(false);
-    toast.success("Payout request submitted successfully");
+    try {
+      await requestPayout.mutateAsync(pendingAmount);
+      setBalance(ZERO_BALANCE);
+      setIsModalOpen(false);
+      toast.success("Payout request submitted successfully");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to submit payout request"));
+    }
   };
 
   if (isLoading) {
@@ -116,10 +122,18 @@ const PayoutsPage = () => {
       {/* Request Payout */}
       <RequestPayoutCard
         balance={formattedBalance}
+        availableBalance={availableBalance}
         destination={destinationAccount}
         disabled={availableBalance === 0}
-        onWithdraw={() => {
-          setBalance(formattedBalance);
+        onWithdraw={(amount) => {
+          setPendingAmount(amount);
+          setBalance(
+            new Intl.NumberFormat("en-NG", {
+              style: "currency",
+              currency: "NGN",
+              minimumFractionDigits: 0,
+            }).format(amount)
+          );
           setIsModalOpen(true);
         }}
       />
