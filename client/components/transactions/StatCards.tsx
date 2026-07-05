@@ -4,50 +4,39 @@ import { motion } from "framer-motion";
 import { HiOutlineArrowDownLeft, HiOutlineArrowUpRight, HiOutlineBanknotes, HiOutlineExclamationTriangle } from "react-icons/hi2";
 
 import { formatNaira } from "./data";
-import type { Transaction } from "./types";
+import type { TransactionStats } from "@/types/transaction.types";
 
 interface StatCardsProps {
-  transactions: Transaction[];
+  stats: TransactionStats;
 }
 
-const StatCards = ({ transactions }: StatCardsProps) => {
-  const moneyIn = transactions
-    .filter((t) => t.type === "PAYMENT" && t.status === "SUCCESS")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const moneyOut = transactions
-    .filter((t) => (t.type === "PAYOUT" || t.type === "REFUND") && t.status === "SUCCESS")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const pendingCount = transactions.filter((t) => t.status === "PENDING").length;
-  const failedCount = transactions.filter((t) => t.status === "FAILED").length;
-
-  const stats = [
+const StatCards = ({ stats }: StatCardsProps) => {
+  const cards = [
     {
       title: "Total Volume",
-      value: formatNaira(moneyIn + moneyOut),
-      description: `${transactions.length} transactions this period`,
+      value: formatNaira(stats.totalVolume),
+      description: `${stats.totalCount} transactions this period`,
       icon: HiOutlineBanknotes,
       accent: "text-[#0b79ff] bg-[#0b79ff]/10",
     },
     {
       title: "Money In",
-      value: formatNaira(moneyIn),
-      description: "Successful payments received",
+      value: formatNaira(stats.moneyIn),
+      description: `${stats.moneyInCount} successful payments received`,
       icon: HiOutlineArrowDownLeft,
       accent: "text-emerald-600 bg-emerald-50",
     },
     {
       title: "Money Out",
-      value: formatNaira(moneyOut),
-      description: "Payouts and refunds settled",
+      value: formatNaira(stats.moneyOut),
+      description: "Payouts settled",
       icon: HiOutlineArrowUpRight,
       accent: "text-zinc-600 bg-zinc-100",
     },
     {
       title: "Needs Attention",
-      value: `${pendingCount + failedCount}`,
-      description: `${pendingCount} pending · ${failedCount} failed`,
+      value: `${stats.needsAttention}`,
+      description: `${stats.pendingCount} pending · ${stats.failedCount} failed`,
       icon: HiOutlineExclamationTriangle,
       accent: "text-amber-600 bg-amber-50",
     },
@@ -55,7 +44,7 @@ const StatCards = ({ transactions }: StatCardsProps) => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-      {stats.map((stat, i) => {
+      {cards.map((stat, i) => {
         const Icon = stat.icon;
         return (
           <motion.div

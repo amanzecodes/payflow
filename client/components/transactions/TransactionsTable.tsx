@@ -41,14 +41,14 @@ const TransactionsTable = ({ transactions, onSelect }: TransactionsTableProps) =
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
+      <table className="w-full min-w-160 text-left border-collapse">
         <thead>
           <tr className="text-xs font-semibold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
-            <th className="pb-3 pl-1">Transaction</th>
-            <th className="pb-3">Type</th>
-            <th className="pb-3">Method</th>
-            <th className="pb-3">Status</th>
-            <th className="pb-3 text-right pr-1">Amount</th>
+            <th className="pb-3 pl-1 whitespace-nowrap">Transaction</th>
+            <th className="pb-3 whitespace-nowrap">Type</th>
+            <th className="pb-3 whitespace-nowrap">Method</th>
+            <th className="pb-3 whitespace-nowrap">Status</th>
+            <th className="pb-3 text-right pr-1 whitespace-nowrap">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -81,12 +81,12 @@ const TransactionsTable = ({ transactions, onSelect }: TransactionsTableProps) =
                     </div>
                   </div>
                 </td>
-                <td className="py-4 text-sm text-zinc-600">{TYPE_LABEL[txn.type]}</td>
-                <td className="py-4 text-sm text-zinc-500">
+                <td className="py-4 text-sm text-zinc-600 whitespace-nowrap">{TYPE_LABEL[txn.type]}</td>
+                <td className="py-4 text-sm text-zinc-500 whitespace-nowrap">
                   {txn.method}
                   <p className="text-xs text-zinc-400 mt-0.5">{formatDateTime(txn.createdAt)}</p>
                 </td>
-                <td className="py-4">
+                <td className="py-4 whitespace-nowrap">
                   <span
                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[txn.status]}`}
                   >
@@ -94,7 +94,7 @@ const TransactionsTable = ({ transactions, onSelect }: TransactionsTableProps) =
                   </span>
                 </td>
                 <td
-                  className={`py-4 text-right pr-1 text-sm font-bold ${isCredit ? "text-emerald-600" : "text-zinc-900"}`}
+                  className={`py-4 text-right pr-1 text-sm font-bold whitespace-nowrap ${isCredit ? "text-emerald-600" : "text-zinc-900"}`}
                 >
                   {isCredit ? "+" : "-"}
                   {formatNaira(txn.amount)}

@@ -41,7 +41,7 @@ const FilterBar = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 p-1 rounded-full bg-zinc-100 self-start sm:self-auto">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-zinc-100 max-w-full overflow-x-auto self-start sm:self-auto">
           {STATUS_FILTERS.map((filter) => {
             const isActive = activeStatus === filter;
 
@@ -49,7 +49,7 @@ const FilterBar = ({
               <button
                 key={filter}
                 onClick={() => onStatusChange(filter)}
-                className="relative px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer"
+                className="relative shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer"
               >
                 {isActive && (
                   <motion.span
