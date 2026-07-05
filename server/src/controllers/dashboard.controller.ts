@@ -4,7 +4,7 @@ import { MemberService } from "../services/member.service";
 
 import { prisma } from "../lib/prisma";
 import { CollectionService } from "../services/collection.service";
-import { CycleStatus } from "../generated/prisma/enums";
+import { CycleStatus, WebhookReconciliationStatus } from "../generated/prisma/enums";
 import { AppError } from "../middleware/error.middleware";
 
 export class DashboardController {
@@ -198,102 +198,229 @@ export class DashboardController {
   }
 
   async getTransactions(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const orgId = req.params.orgId as string
-      const page = Math.max(1, parseInt(req.query.page as string) || 1)
-      const limit = Math.min(100, parseInt(req.query.limit as string) || 20)
-      const skip = (page - 1) * limit
+  try {
+    const orgId = req.params.orgId as string
+    const page = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 20)
+    const skip = (page - 1) * limit
 
-      // get all VA numbers for this org's members in one query
-      const memberVaNumbers = await prisma.member
-        .findMany({
-          where: { orgId },
-          select: { vaNumber: true }
-        })
-        .then(ms => ms.map(m => m.vaNumber))
+    // get all VA numbers for this org's members
+    const memberVaNumbers = await prisma.member
+      .findMany({ where: { orgId }, select: { vaNumber: true } })
+      .then(ms => ms.map(m => m.vaNumber))
 
-      // get payout transfer refs for this org
-      const payoutRefs = await prisma.payout
-        .findMany({
-          where: { orgId, transferRef: { not: null } },
-          select: { transferRef: true }
-        })
-        .then(ps => ps.map(p => p.transferRef!))
+    // get payout transfer refs for this org
+    const payoutRefs = await prisma.payout
+      .findMany({
+        where: { orgId, transferRef: { not: null } },
+        select: { transferRef: true, bankName: true, bankAccount: true }
+      })
 
-      // fetch payment events (by VA number) and payout events (by transferRef)
-      // in parallel then merge
-      const [paymentEvents, payoutEvents, totalPayment, totalPayout] =
-        await Promise.all([
-          prisma.webhookEvent.findMany({
-            where: { accountRef: { in: memberVaNumbers } },
-            orderBy: { createdAt: 'desc' },
-            take: limit,
-            skip
-          }),
-          prisma.webhookEvent.findMany({
-            where: {
-              eventType: { in: ['payout_success', 'payout_refund'] },
-              txRef: { in: payoutRefs }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: limit,
-            skip
-          }),
-          prisma.webhookEvent.count({
-            where: { accountRef: { in: memberVaNumbers } }
-          }),
-          prisma.webhookEvent.count({
-            where: {
-              eventType: { in: ['payout_success', 'payout_refund'] },
-              txRef: { in: payoutRefs }
-            }
-          })
-        ])
+    const payoutRefMap = new Map(
+      payoutRefs
+        .filter(p => p.transferRef)
+        .map(p => [p.transferRef!, p])
+    )
 
-      // merge and sort by date descending, then paginate
-      const allEvents = [...paymentEvents, ...payoutEvents]
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        .slice(0, limit)
+    const payoutRefList = Array.from(payoutRefMap.keys())
 
-      // enrich with member data
-      const enriched = await Promise.all(
-        allEvents.map(async event => {
-          const member = event.accountRef
-            ? await prisma.member.findFirst({
-                where: { vaNumber: event.accountRef },
-                select: { id: true, name: true, identifier: true }
-              })
-            : null
-
-          return {
-            id: event.id,
-            eventType: event.eventType,
-            amount: event.amount,
-            reconciliationStatus: event.reconciliationStatus,
-            txRef: event.txRef,
-            processed: event.processed,
-            processedAt: event.processedAt,
-            createdAt: event.createdAt,
-            member
-          }
-        })
-      )
-
+    // early return if org has no data yet
+    if (memberVaNumbers.length === 0 && payoutRefList.length === 0) {
       res.status(200).json({
         success: true,
         data: {
-          transactions: enriched,
-          pagination: {
-            total: totalPayment + totalPayout,
-            page,
-            limit,
-            pages: Math.ceil((totalPayment + totalPayout) / limit)
-          }
+          stats: {
+            totalVolume: 0, totalCount: 0, moneyIn: 0,
+            moneyInCount: 0, moneyOut: 0, needsAttention: 0,
+            pendingCount: 0, failedCount: 0, successCount: 0
+          },
+          transactions: [],
+          pagination: { total: 0, page, limit, pages: 0 }
         }
       })
-    } catch (error) {
-      next(error)
+      return
     }
+
+    // fetch all events — merge and paginate in memory for correct ordering
+    const [allPaymentEvents, allPayoutEvents] = await Promise.all([
+      memberVaNumbers.length > 0
+        ? prisma.webhookEvent.findMany({
+            where: { accountRef: { in: memberVaNumbers } },
+            orderBy: { createdAt: 'desc' },
+            take: 500
+          })
+        : Promise.resolve([]),
+      payoutRefList.length > 0
+        ? prisma.webhookEvent.findMany({
+            where: {
+              eventType: { in: ['payout_success', 'payout_refund'] },
+              txRef: { in: payoutRefList }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 500
+          })
+        : Promise.resolve([])
+    ])
+
+    
+    const merged = [...allPaymentEvents, ...allPayoutEvents]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+    const totalCount = merged.length
+    const paginated = merged.slice(skip, skip + limit)
+
+    
+    const membersByVaNumber = await prisma.member
+      .findMany({
+        where: { vaNumber: { in: memberVaNumbers } },
+        select: { id: true, name: true, identifier: true, vaNumber: true }
+      })
+      .then(members => new Map(members.map(m => [m.vaNumber, m])))
+
+    
+    const [moneyInAgg, moneyOutAgg, needsAttentionCount, pendingCount, failedCount] =
+      await Promise.all([
+        
+        memberVaNumbers.length > 0
+          ? prisma.webhookEvent.aggregate({
+              where: {
+                accountRef: { in: memberVaNumbers },
+                reconciliationStatus: WebhookReconciliationStatus.SUCCESS
+              },
+              _sum: { amount: true },
+              _count: { id: true }
+            })
+          : Promise.resolve({ _sum: { amount: 0 }, _count: { id: 0 } }),
+
+        
+        payoutRefList.length > 0
+          ? prisma.webhookEvent.aggregate({
+              where: {
+                eventType: { in: ['payout_success', 'payout_refund'] },
+                txRef: { in: payoutRefList }
+              },
+              _sum: { amount: true }
+            })
+          : Promise.resolve({ _sum: { amount: 0 } }),
+
+        
+        memberVaNumbers.length > 0
+          ? prisma.webhookEvent.count({
+              where: {
+                accountRef: { in: memberVaNumbers },
+                reconciliationStatus: {
+                  in: [
+                    WebhookReconciliationStatus.UNDERPAYMENT,
+                    WebhookReconciliationStatus.PAYMENT_FAILED
+                  ]
+                }
+              }
+            })
+          : Promise.resolve(0),
+
+        
+        memberVaNumbers.length > 0
+          ? prisma.webhookEvent.count({
+              where: {
+                accountRef: { in: memberVaNumbers },
+                processed: false
+              }
+            })
+          : Promise.resolve(0),
+
+        
+        memberVaNumbers.length > 0
+          ? prisma.webhookEvent.count({
+              where: {
+                accountRef: { in: memberVaNumbers },
+                reconciliationStatus: WebhookReconciliationStatus.PAYMENT_FAILED
+              }
+            })
+          : Promise.resolve(0)
+      ])
+
+    const moneyIn = moneyInAgg._sum.amount ?? 0
+    const moneyOut = moneyOutAgg._sum.amount ?? 0
+    const successCount = moneyInAgg._count.id ?? 0
+    const totalVolume = moneyIn + moneyOut
+
+    
+    const enriched = paginated.map(event => {
+      const isPayment = event.accountRef && memberVaNumbers.includes(event.accountRef)
+
+      if (isPayment) {
+        const member = event.accountRef
+          ? membersByVaNumber.get(event.accountRef) ?? null
+          : null
+
+        return {
+          id: event.id,
+          eventType: event.eventType,
+          type: 'Payment',
+          method: 'Virtual Account',
+          amount: event.amount,
+          reconciliationStatus: event.reconciliationStatus,
+          txRef: event.txRef,
+          processed: event.processed,
+          processedAt: event.processedAt,
+          createdAt: event.createdAt,
+          member: member
+            ? { id: member.id, name: member.name, identifier: member.identifier }
+            : null,
+          payout: null
+        }
+      }
+
+      // payout event
+      const payoutDetails = event.txRef ? payoutRefMap.get(event.txRef) : null
+
+      return {
+        id: event.id,
+        eventType: event.eventType,
+        type: 'Payout',
+        method: 'Bank Transfer',
+        amount: event.amount,
+        reconciliationStatus: event.reconciliationStatus,
+        txRef: event.txRef,
+        processed: event.processed,
+        processedAt: event.processedAt,
+        createdAt: event.createdAt,
+        member: null,
+        payout: payoutDetails
+          ? {
+              bankName: payoutDetails.bankName,
+              last4: payoutDetails.bankAccount.slice(-4)
+            }
+          : null
+      }
+    })
+
+    res.status(200).json({
+      success: true,
+      data: {
+        stats: {
+          totalVolume,
+          totalCount,
+          moneyIn,
+          moneyInCount: successCount,
+          moneyOut,
+          needsAttention: needsAttentionCount,
+          pendingCount,
+          failedCount,
+          successCount
+        },
+        transactions: enriched,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          pages: Math.ceil(totalCount / limit)
+        }
+      }
+    })
+  } catch (error) {
+    next(error)
   }
+}
 
 }
