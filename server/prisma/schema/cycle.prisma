@@ -1,13 +1,21 @@
 model Cycle {
-  id            String      @id @default(cuid())
-  collectionId  String
-  period        String
-  dueDate       DateTime
-  openedAt      DateTime    @default(now())
+  id           String      @id @default(cuid())
+  collectionId String
+  period       String
+  dueDate      DateTime?
+  status       CycleStatus @default(OPEN)
+  openedAt     DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  collection    Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  charges       Charge[]
+  collection   Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  charges      Charge[]
 
+  
   @@unique([collectionId, period])
+
+  
+  @@index([status])
+  @@index([collectionId, status])
+
   @@map("cycles")
 }

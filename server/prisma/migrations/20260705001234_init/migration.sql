@@ -2,10 +2,13 @@
 CREATE TYPE "OrgType" AS ENUM ('ESTATE', 'COOPERATIVE', 'GYM', 'SCHOOL', 'CLINIC', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "CycleFrequency" AS ENUM ('WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'TERMLY');
+CREATE TYPE "CycleFrequency" AS ENUM ('MONTHLY', 'YEARLY', 'ONE_TIME', 'CUSTOM');
 
 -- CreateEnum
-CREATE TYPE "ChargeStatus" AS ENUM ('PENDING', 'PAID', 'OVERDUE');
+CREATE TYPE "CycleStatus" AS ENUM ('OPEN', 'CLOSED', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "ChargeStatus" AS ENUM ('PENDING', 'PAID', 'OVERDUE', 'UNDERPAID', 'OVERPAID');
 
 -- CreateEnum
 CREATE TYPE "PayoutStatus" AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
@@ -20,7 +23,23 @@ CREATE TYPE "CollectionStructure" AS ENUM ('FLAT', 'VARIABLE');
 CREATE TYPE "ConversationRole" AS ENUM ('ADMIN', 'MEMBER', 'NEW');
 
 -- CreateEnum
-CREATE TYPE "ConversationStep" AS ENUM ('AWAITING_ORG_NAME', 'AWAITING_COLLECTION_NAME', 'AWAITING_ORG_TYPE', 'AWAITING_CYCLE', 'AWAITING_STRUCTURE', 'AWAITING_FLAT_AMOUNT', 'AWAITING_FEE_LINES', 'AWAITING_PAYOUT_BANK', 'AWAITING_PAYOUT_CONFIRM', 'AWAITING_MEMBERS', 'COMPLETE', 'MEMBER_AWAITING_NAME', 'MEMBER_AWAITING_PLAN_SELECTION', 'MEMBER_AWAITING_CONFIRM', 'MEMBER_COMPLETE');
+CREATE TYPE "ConversationStep" AS ENUM ('AWAITING_ORG_NAME', 'AWAITING_COLLECTION_NAME', 'AWAITING_ORG_TYPE', 'AWAITING_CYCLE', 'AWAITING_STRUCTURE', 'AWAITING_FLAT_AMOUNT', 'AWAITING_FEE_LINES', 'AWAITING_ONE_TIME_DEADLINE', 'AWAITING_CUSTOM_DEADLINE', 'AWAITING_PAYOUT_BANK', 'AWAITING_PAYOUT_CONFIRM', 'AWAITING_WEB_EMAIL', 'AWAITING_WEB_EMAIL_CONFIRM', 'AWAITING_MEMBERS', 'AWAITING_NEWCYCLE_DEADLINE', 'COMPLETE', 'MEMBER_AWAITING_NAME', 'MEMBER_AWAITING_PLAN_SELECTION', 'MEMBER_AWAITING_CONFIRM', 'MEMBER_COMPLETE');
+
+-- CreateEnum
+CREATE TYPE "WebhookReconciliationStatus" AS ENUM ('SUCCESS', 'UNDERPAYMENT', 'OVERPAYMENT', 'PAYMENT_FAILED', 'PAYOUT_SUCCESS', 'PAYOUT_REFUNDED');
+
+-- CreateTable
+CREATE TABLE "admins" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "admins_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "charges" (
@@ -28,6 +47,7 @@ CREATE TABLE "charges" (
     "memberId" TEXT NOT NULL,
     "cycleId" TEXT NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
+    "paidSoFar" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "status" "ChargeStatus" NOT NULL DEFAULT 'PENDING',
     "paidAt" TIMESTAMP(3),
     "txRef" TEXT,
@@ -81,8 +101,10 @@ CREATE TABLE "cycles" (
     "id" TEXT NOT NULL,
     "collectionId" TEXT NOT NULL,
     "period" TEXT NOT NULL,
-    "dueDate" TIMESTAMP(3) NOT NULL,
+    "dueDate" TIMESTAMP(3),
+    "status" "CycleStatus" NOT NULL DEFAULT 'OPEN',
     "openedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "cycles_pkey" PRIMARY KEY ("id")
 );
@@ -122,6 +144,7 @@ CREATE TABLE "organisations" (
     "name" TEXT NOT NULL,
     "type" "OrgType" NOT NULL,
     "slug" TEXT NOT NULL,
+    "adminId" TEXT,
     "adminWhatsapp" TEXT NOT NULL,
     "adminEmail" TEXT,
     "payoutBankAccount" TEXT NOT NULL,
@@ -162,16 +185,29 @@ CREATE TABLE "webhook_events" (
     "payload" JSONB NOT NULL,
     "processed" BOOLEAN NOT NULL DEFAULT false,
     "processedAt" TIMESTAMP(3),
+    "reconciliationStatus" "WebhookReconciliationStatus",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "webhook_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "admins_email_key" ON "admins"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "admins_phone_key" ON "admins"("phone");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "charges_memberId_cycleId_key" ON "charges"("memberId", "cycleId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "conversation_sessions_phone_key" ON "conversation_sessions"("phone");
+
+-- CreateIndex
+CREATE INDEX "cycles_status_idx" ON "cycles"("status");
+
+-- CreateIndex
+CREATE INDEX "cycles_collectionId_status_idx" ON "cycles"("collectionId", "status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "cycles_collectionId_period_key" ON "cycles"("collectionId", "period");
@@ -193,6 +229,12 @@ CREATE UNIQUE INDEX "organisations_adminWhatsapp_key" ON "organisations"("adminW
 
 -- CreateIndex
 CREATE UNIQUE INDEX "organisations_inviteCode_key" ON "organisations"("inviteCode");
+
+-- CreateIndex
+CREATE INDEX "webhook_events_txRef_idx" ON "webhook_events"("txRef");
+
+-- CreateIndex
+CREATE INDEX "webhook_events_processed_idx" ON "webhook_events"("processed");
 
 -- AddForeignKey
 ALTER TABLE "charges" ADD CONSTRAINT "charges_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "members"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -220,6 +262,9 @@ ALTER TABLE "fee_enrollments" ADD CONSTRAINT "fee_enrollments_memberId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "fee_enrollments" ADD CONSTRAINT "fee_enrollments_feeLineId_fkey" FOREIGN KEY ("feeLineId") REFERENCES "fee_lines"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organisations" ADD CONSTRAINT "organisations_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admins"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payouts" ADD CONSTRAINT "payouts_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "organisations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
