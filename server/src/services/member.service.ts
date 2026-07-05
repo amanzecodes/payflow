@@ -4,6 +4,7 @@ import { OrganisationRepository } from "../repositories/organisation.repository"
 import { PaymentProvider } from "../providers/PaymentProviders";
 import { AppError } from "../middleware/error.middleware";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 export class MemberService {
   constructor(
@@ -16,11 +17,19 @@ export class MemberService {
     orgId: string;
     name: string;
     identifier: string;
-    phone?: string;
+    phone: string;
     expectedAmount: number;
   }): Promise<Member> {
     const org = await this.orgRepo.findById(data.orgId);
     if (!org) throw new AppError("Organisation not found", 404);
+
+    const phoneRegex = /^(\+234|0)[0-9]{10}$/;
+    if (!phoneRegex.test(data.phone.replace(/\s/g, ""))) {
+      throw new AppError(
+        "Invalid phone number. Use format: +2348012345678 or 08012345678",
+        400,
+      );
+    }
 
     const { createId } = await import("@paralleldrive/cuid2");
     const memberId = createId();
@@ -48,11 +57,10 @@ export class MemberService {
     });
 
     // find the current open cycle for this org
-    // dueDate > now means the cycle has not expired yet
     const currentCycle = await prisma.cycle.findFirst({
       where: {
         collection: { orgId: data.orgId },
-        dueDate: { gt: new Date() },
+        status: "OPEN",
       },
       orderBy: { openedAt: "desc" },
     });
@@ -65,8 +73,13 @@ export class MemberService {
           cycleId: currentCycle.id,
           amount: data.expectedAmount,
           status: "PENDING",
+          paidSoFar: 0,
         },
       });
+    } else {
+      logger.warn(
+        `[MemberService] No OPEN cycle found for org: ${data.orgId} — member added without charge`,
+      );
     }
 
     return member;
@@ -92,7 +105,7 @@ export class MemberService {
     const currentCycle = await prisma.cycle.findFirst({
       where: {
         collection: { orgId },
-        dueDate: { gt: new Date() },
+        status: "OPEN",
       },
       orderBy: { openedAt: "desc" },
     });
