@@ -70,11 +70,11 @@ export const ORG_TYPES: Record<string, string> = {
 
 export const CYCLE_TYPES: Record<string, string> = {
   '1': 'MONTHLY',
-  '2': 'QUARTERLY',
-  '3': 'YEARLY',
-  '4': 'TERMLY',
-  '5': 'ONE_TIME'
+  '2': 'YEARLY',
+  '3': 'ONE_TIME',
+  '4': 'CUSTOM',
 }
+
 export interface PayoutPageData {
   balance: {
     totalCollected: number

@@ -1,21 +1,24 @@
 import { prisma } from '../lib/prisma'
 import { logger } from '../lib/logger'
-import { CycleFrequency } from '../generated/prisma/enums'
-import { format, endOfMonth, endOfQuarter, endOfYear } from 'date-fns'
+import { CycleFrequency, CycleStatus } from '../generated/prisma/client'
+import { format, endOfMonth, endOfYear } from 'date-fns'
 
 export async function openCycles(): Promise<void> {
-  logger.info('[CronJob] Opening new cycles...')
+  logger.info('[CycleJob] Opening new cycles for MONTHLY and YEARLY collections...')
 
   try {
     const now = new Date()
 
+    // only fetch MONTHLY and YEARLY collections
+    // CUSTOM and ONE_TIME are never touched by the cron
     const collections = await prisma.collection.findMany({
+      where: {
+        cycle: { in: [CycleFrequency.MONTHLY, CycleFrequency.YEARLY] }
+      },
       include: {
         org: {
           include: {
-            members: {
-              where: { status: 'ACTIVE' }
-            }
+            members: { where: { status: 'ACTIVE' } }
           }
         }
       }
@@ -30,23 +33,17 @@ export async function openCycles(): Promise<void> {
           period = format(now, 'yyyy-MM')
           dueDate = endOfMonth(now)
           break
-        case CycleFrequency.ONE_TIME:
-          continue
-        case CycleFrequency.QUARTERLY:
-          period = `${format(now, 'yyyy')}-Q${Math.ceil((now.getMonth() + 1) / 3)}`
-          dueDate = endOfQuarter(now)
-          break
+
         case CycleFrequency.YEARLY:
           period = format(now, 'yyyy')
           dueDate = endOfYear(now)
           break
-        case CycleFrequency.TERMLY:
-          continue
+
         default:
           continue
       }
 
-      // check if cycle already exists for this period
+      // check if this period already has a cycle — prevents duplicate opening
       const existingCycle = await prisma.cycle.findUnique({
         where: {
           collectionId_period: {
@@ -57,46 +54,72 @@ export async function openCycles(): Promise<void> {
       })
 
       if (existingCycle) {
-        logger.info(`[CronJob] Cycle already exists for ${collection.name} — ${period}`)
+        logger.info(
+          `[CycleJob] Cycle ${period} already exists for ${collection.name} — skipping`
+        )
         continue
       }
 
-      // open cycle and create charges in one transaction
-      await prisma.$transaction(async (tx) => {
-        const cycle = await tx.cycle.create({
+      await prisma.$transaction(async tx => {
+        // archive the previous OPEN or CLOSED cycle before opening the new one
+        // this ensures only one cycle is OPEN at any time per collection
+        const archived = await tx.cycle.updateMany({
+          where: {
+            collectionId: collection.id,
+            status: { in: [CycleStatus.OPEN, CycleStatus.CLOSED] }
+          },
+          data: { status: CycleStatus.ARCHIVED }
+        })
+
+        if (archived.count > 0) {
+          logger.info(
+            `[CycleJob] Archived ${archived.count} previous cycles for ${collection.name}`
+          )
+        }
+
+        // open the new cycle
+        const newCycle = await tx.cycle.create({
           data: {
             collectionId: collection.id,
             period,
             dueDate,
+            status: CycleStatus.OPEN
           }
         })
 
         const activeMembers = collection.org.members
 
         if (activeMembers.length === 0) {
-          logger.info(`[CronJob] No active members for ${collection.name}`)
+          logger.info(
+            `[CycleJob] No active members for ${collection.name} — cycle opened with no charges`
+          )
           return
         }
 
+        // create PENDING charges for every active member
+        // skip members with no expectedAmount set
         await tx.charge.createMany({
-          data: activeMembers.map(member => ({
-            memberId: member.id,
-            cycleId: cycle.id,
-            amount: member.expectedAmount,
-            status: 'PENDING'
-          })),
+          data: activeMembers
+            .filter(m => m.expectedAmount > 0)
+            .map(m => ({
+              memberId: m.id,
+              cycleId: newCycle.id,
+              amount: m.expectedAmount,
+              status: 'PENDING',
+              paidSoFar: 0
+            })),
           skipDuplicates: true
         })
 
         logger.info(
-          `[CronJob] Opened cycle ${period} for ${collection.name} — ${activeMembers.length} charges created`
+          `[CycleJob] Opened ${period} cycle for ${collection.name} — ${activeMembers.length} charges created`
         )
       })
     }
 
-    logger.info('[CronJob] Cycle opening complete')
+    logger.info('[CycleJob] Cycle opening complete')
   } catch (error) {
-    logger.error(`[CronJob] Error opening cycles: ${error}`)
+    logger.error(`[CycleJob] Error opening cycles: ${error}`)
   }
 }
 
@@ -105,5 +128,7 @@ export async function startCycleJob(): Promise<void> {
   cron.schedule('0 0 1 * *', openCycles, {
     timezone: 'Africa/Lagos'
   })
-  logger.info('[CronJob] Cycle job scheduled — runs 1st of every month at midnight Lagos time')
+  logger.info(
+    '[CycleJob] Scheduled — runs 1st of every month at midnight (Lagos time)'
+  )
 }

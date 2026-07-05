@@ -1,23 +1,47 @@
 import { prisma } from '../lib/prisma'
 import { logger } from '../lib/logger'
+import { CycleStatus } from '../generated/prisma/client'
 
 export async function markOverdueCharges(): Promise<void> {
-  logger.info('[CronJob] Checking for overdue charges...')
+  logger.info('[OverdueJob] Checking for overdue charges...')
 
   try {
-    const result = await prisma.charge.updateMany({
+    const now = new Date()
+
+    
+    const closedCycles = await prisma.cycle.updateMany({
       where: {
-        status: { in: ['PENDING', 'UNDERPAID']},
+        status: CycleStatus.OPEN,
+        dueDate: { lt: now }
+        // dueDate is NOT null implicitly — prisma only matches non-null values
+      },
+      data: { status: CycleStatus.CLOSED }
+    })
+
+    if (closedCycles.count > 0) {
+      logger.info(`[OverdueJob] Closed ${closedCycles.count} cycles`)
+    }
+
+    
+    const overdueCharges = await prisma.charge.updateMany({
+      where: {
+        status: { in: ['PENDING', 'UNDERPAID'] },
         cycle: {
-          dueDate: { lt: new Date() }
+          dueDate: { lt: now }
         }
       },
       data: { status: 'OVERDUE' }
     })
 
-    logger.info(`[CronJob] Marked ${result.count} charges as overdue`)
+    if (overdueCharges.count > 0) {
+      logger.info(
+        `[OverdueJob] Marked ${overdueCharges.count} charges as OVERDUE`
+      )
+    }
+
+    logger.info('[OverdueJob] Complete')
   } catch (error) {
-    logger.error(`[CronJob] Error marking overdue charges: ${error}`)
+    logger.error(`[OverdueJob] Error: ${error}`)
   }
 }
 
