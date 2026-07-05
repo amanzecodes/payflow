@@ -1191,9 +1191,8 @@ export class WhatsAppService {
     phone: string,
     message: string,
   ): Promise<string> {
-    const inviteCode = message.toUpperCase().trim();
-
-    const org = await this.orgRepo.findByInviteCode(inviteCode);
+  
+    const org = await this.orgRepo.findByInviteCode(message);
     if (!org) {
       return twimlResponse(
         `⚠️ *Invalid join code*\n\nPlease check the code and try again.\n\nIf you received this code from your group admin, make sure you are typing it exactly as shared.`,

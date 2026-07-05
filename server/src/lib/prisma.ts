@@ -13,7 +13,7 @@ function createPrismaClient() {
     connectionString: url,
     max: 20, 
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 15000,
     maxUses: 7500, // Recreate connections to prevent memory leaks in pg
   });
   

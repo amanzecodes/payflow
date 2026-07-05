@@ -24,7 +24,7 @@ export class FeeLineController {
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const feeLineId  = req.params as unknown as string
+      const feeLineId = req.params.feeLineId as string
       const adminId = typeof req.admin!.id === 'string' ? req.admin!.id : req.admin!.id[0]
       await this.service.deleteFeeLine(feeLineId, adminId)
       res.status(200).json({ success: true, message: 'Fee line deleted' })

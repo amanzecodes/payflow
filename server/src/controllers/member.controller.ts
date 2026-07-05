@@ -5,7 +5,7 @@ import { MemberService } from '../services/member.service'
 const createMemberSchema = z.object({
   name: z.string().min(2),
   identifier: z.string().min(1),
-  phone: z.string().optional(),
+  phone: z.string(),
   expectedAmount: z.number().positive(),
 })
 
