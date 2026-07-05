@@ -138,7 +138,7 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
     : "Buy electricity";
 
   return (
-    <div className="p-6 rounded-xl bg-white border border-zinc-200">
+    <div className="p-6 rounded-xl bg-white">
       <p className="text-base font-bold text-zinc-900">Pay a bill</p>
       <p className="text-sm text-zinc-500 mt-1">Charge your wallet for airtime, data, and electricity.</p>
 

@@ -93,7 +93,7 @@ const RegisterPage = () => {
                 htmlFor="email"
                 className="block text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2"
               >
-                Business Email Address
+                Email Address
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3.5 flex items-center text-muted-foreground">
@@ -117,7 +117,7 @@ const RegisterPage = () => {
                 htmlFor="phone"
                 className="block text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2"
               >
-                Business Phone Number
+                Phone Number
               </label>
               <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={register.isError} />
             </div>
@@ -127,7 +127,7 @@ const RegisterPage = () => {
                 htmlFor="password"
                 className="block text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2"
               >
-                Security Password
+                Password
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3.5 flex items-center text-muted-foreground">

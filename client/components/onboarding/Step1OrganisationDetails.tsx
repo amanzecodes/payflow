@@ -13,8 +13,14 @@ import { CustomSelect } from "./CustomSelect";
 const ORG_TYPES: OrgType[] = ["ESTATE", "COOPERATIVE", "GYM", "SCHOOL", "CLINIC", "OTHER"];
 const STRUCTURES: Structure[] = ["FLAT", "VARIABLE"];
 
+export interface Step1Data {
+  name: string;
+  type: OrgType;
+  structure: Structure;
+}
+
 interface Step1Props {
-  onNext: (orgId: string, data: any) => void;
+  onNext: (orgId: string, data: Step1Data) => void;
 }
 
 export function Step1OrganisationDetails({ onNext }: Step1Props) {
@@ -78,31 +84,32 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-7">
-      {/* Organisation Name */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
-          Organisation Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0b79ff] focus:border-transparent transition-all"
-          placeholder="e.g. Sunrise Estate"
-        />
-      </div>
+      {/* Organisation Name + Type */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
+            PayFlet Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-full border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 transition-all duration-200"
+            placeholder="e.g. Sunrise Estate"
+          />
+        </div>
 
-      {/* Organisation Type */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
-          Organisation Type <span className="text-red-500">*</span>
-        </label>
-        <CustomSelect
-          value={type}
-          onChange={(value) => setType(value as OrgType)}
-          options={ORG_TYPES.map((t) => ({ label: t, value: t }))}
-          placeholder="Select organisation type"
-        />
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
+            Payflet Type <span className="text-red-500">*</span>
+          </label>
+          <CustomSelect
+            value={type}
+            onChange={(value) => setType(value as OrgType)}
+            options={ORG_TYPES.map((t) => ({ label: t, value: t }))}
+            placeholder="Select payflet type"
+          />
+        </div>
       </div>
 
       {/* Collection Structure */}
@@ -110,11 +117,11 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
         <label className="block text-sm font-semibold text-gray-900 mb-3">
           Collection Structure <span className="text-red-500">*</span>
         </label>
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {STRUCTURES.map((s) => (
             <label
               key={s}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 border border-gray-200 rounded-full cursor-pointer hover:bg-gray-50 transition-colors"
             >
               <input
                 type="radio"
@@ -122,7 +129,7 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
                 value={s}
                 checked={structure === s}
                 onChange={(e) => setStructure(e.target.value as Structure)}
-                className="w-4 h-4 accent-[#0b79ff]"
+                className="w-4 h-4 accent-blue-600"
               />
               <span className="text-sm font-medium text-gray-700">
                 {s === "FLAT" ? "Flat Amount (same for all)" : "Variable (different per member)"}
@@ -141,7 +148,7 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
           type="tel"
           value={adminWhatsapp}
           onChange={(e) => setAdminWhatsapp(e.target.value)}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0b79ff] focus:border-transparent transition-all"
+          className="w-full px-4 py-2.5 rounded-full border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 transition-all duration-200"
           placeholder="e.g. +2348012345678"
         />
       </div>
@@ -150,7 +157,7 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
       <div className="pt-2 border-t border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-4 mt-6">Payout Bank Account</h3>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Bank Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -169,6 +176,8 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
               placeholder="Select a bank"
               isLoading={banks.isLoading}
               disabled={banks.isLoading}
+              searchable
+              searchPlaceholder="Search banks..."
             />
           </div>
 
@@ -183,14 +192,14 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value.slice(0, 10))}
                 maxLength={10}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0b79ff] focus:border-transparent transition-all"
+                className="flex-1 min-w-0 px-4 py-2.5 rounded-full border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 transition-all duration-200"
                 placeholder="10-digit account"
               />
               <button
                 type="button"
                 onClick={handleVerifyAccount}
                 disabled={verifyBank.isPending || !bankCode || !accountNumber}
-                className="px-5 py-2.5 bg-[#0b79ff] text-white font-medium rounded-lg hover:bg-[#0066de] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-full border-b-4 border-blue-800 shadow-sm hover:bg-blue-500 active:border-b-2 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 whitespace-nowrap"
               >
                 {verifyBank.isPending ? "Verifying..." : "Verify"}
               </button>
@@ -199,8 +208,8 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
 
           {/* Success Message */}
           {accountName && (
-            <div className="p-3.5 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm font-medium text-green-800">✓ Account Name: {accountName}</p>
+            <div className="sm:col-span-2 p-3.5 bg-green-50 border border-green-200 rounded-2xl">
+              <p className="text-sm font-medium text-green-800">Account Name: {accountName}</p>
             </div>
           )}
         </div>
@@ -208,7 +217,7 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
 
       {/* Error Message */}
       {error && (
-        <div className="p-3.5 bg-red-50 border border-red-200 rounded-lg">
+        <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl">
           <p className="text-sm font-medium text-red-700">{error}</p>
         </div>
       )}
@@ -217,7 +226,7 @@ export function Step1OrganisationDetails({ onNext }: Step1Props) {
       <button
         type="submit"
         disabled={createOrg.isPending}
-        className="w-full px-4 py-3 bg-[#0b79ff] text-white font-semibold rounded-lg hover:bg-[#0066de] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-8"
+        className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-full border-b-4 border-blue-800 shadow-md hover:bg-blue-500 active:border-b-2 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 mt-8"
       >
         {createOrg.isPending ? "Creating Organisation..." : "Continue to Collection Setup"}
       </button>

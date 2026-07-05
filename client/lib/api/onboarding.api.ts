@@ -48,6 +48,7 @@ export const createCollection = async (
     name: string;
     cycle: string;
     amount?: number;
+    dueDate?: string;
   }
 ): Promise<Collection> => {
   const { data } = await apiClient.post<{ success: boolean; data: Collection }>(
@@ -78,6 +79,7 @@ export const addMember = async (
   payload: {
     name: string;
     identifier: string;
+    phone?: string;
     expectedAmount: number;
   }
 ): Promise<Member> => {

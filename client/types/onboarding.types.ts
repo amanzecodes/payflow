@@ -1,6 +1,6 @@
 export type OrgType = 'ESTATE' | 'COOPERATIVE' | 'GYM' | 'SCHOOL' | 'CLINIC' | 'OTHER'
 export type Structure = 'FLAT' | 'VARIABLE'
-export type CycleFrequency = 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'TERMLY' | 'ONE_TIME'
+export type CycleFrequency = 'MONTHLY' | 'YEARLY' | 'ONE_TIME' | 'CUSTOM'
 
 export interface Bank {
   name: string
@@ -40,6 +40,7 @@ export interface Member {
   id: string
   name: string
   identifier: string
+  phone?: string
   vaNumber: string
   vaBankName: string
   expectedAmount: number

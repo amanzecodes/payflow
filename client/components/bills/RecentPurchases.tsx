@@ -24,7 +24,7 @@ const TYPE_LABEL: Record<BillTab, string> = {
 
 const RecentPurchases = ({ purchases }: RecentPurchasesProps) => {
   return (
-    <div className="p-6 rounded-xl bg-white border border-zinc-200">
+    <div className="p-6 rounded-xl bg-white">
       <p className="text-base font-bold text-zinc-900">Recent purchases</p>
       <p className="text-sm text-zinc-500 mt-1">The last few airtime, data, and power runs from your wallet.</p>
 

@@ -5,15 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  HiOutlineSquares2X2,
   HiOutlineUserGroup,
   HiOutlineBanknotes,
-  HiOutlineArrowsRightLeft,
   HiOutlineBars3,
   HiOutlineXMark,
   HiChevronUpDown,
-  HiOutlineCheck,
+  HiOutlineCheck,  
 } from "react-icons/hi2";
+import { SlHome } from "react-icons/sl";
+import { HiOutlineBolt } from "react-icons/hi2";
+import { IoReceiptOutline } from "react-icons/io5";
 
 import CommandPalette from "@/components/command-palette/CommandPalette";
 import CommandPaletteTrigger from "@/components/command-palette/CommandPaletteTrigger";
@@ -25,9 +26,10 @@ interface SidebarProps {
 }
 
 const NAVIGATION_ITEMS = [
-  { name: "Overview", href: "/dashboard", icon: HiOutlineSquares2X2 },
+  { name: "Overview", href: "/dashboard", icon: SlHome },
   { name: "Members", href: "/members", icon: HiOutlineUserGroup },
-  { name: "Transactions", href: "/transactions", icon: HiOutlineArrowsRightLeft },
+  { name: "Transactions", href: "/transactions", icon: IoReceiptOutline },
+  { name: "Bills", href: "/bills", icon: HiOutlineBolt },
   { name: "Payouts", href: "/payout", icon: HiOutlineBanknotes },
   // { name: "Settings", href: "/settings", icon: HiOutlineCog6Tooth },
 ];

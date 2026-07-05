@@ -58,7 +58,7 @@ const LoginPage = () => {
                 htmlFor="phone"
                 className="block text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2"
               >
-                Business Phone Number
+                Phone Number
               </label>
               <PhoneInput id="phone" value={phone} onChange={setPhone} invalid={login.isError} />
             </div>
@@ -68,7 +68,7 @@ const LoginPage = () => {
                 htmlFor="password"
                 className="block text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2"
               >
-                Security Password
+                Password
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3.5 flex items-center text-muted-foreground">
@@ -108,7 +108,7 @@ const LoginPage = () => {
                 className="w-full cursor-pointer bg-[#0b79ff] hover:bg-[#0066de] text-white font-medium rounded-lg px-6 py-3.5 text-base transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={login.isPending}
               >
-                {login.isPending ? "Authenticating Session…" : "Secure Login"}
+                {login.isPending ? "Authenticating" : "Login"}
               </button>
             </div>
 

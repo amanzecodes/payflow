@@ -73,7 +73,7 @@ const OrganisationPanel = ({ organisation, onSave }: OrganisationPanelProps) => 
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-            Organisation Type
+            PayFlet Type
           </label>
           {isEditing ? (
             <div className="flex gap-3">

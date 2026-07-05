@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Open_Sans } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { ProgressBar } from "@/components/onboarding/ProgressBar";
-import { Step1OrganisationDetails } from "@/components/onboarding/Step1OrganisationDetails";
+import { Step1OrganisationDetails, type Step1Data } from "@/components/onboarding/Step1OrganisationDetails";
 import { Step2CollectionSetup } from "@/components/onboarding/Step2CollectionSetup";
 import { Step3AddMembers } from "@/components/onboarding/Step3AddMembers";
 import { Step4Done } from "@/components/onboarding/Step4Done";
-import type { FeeLine } from "@/types/onboarding.types";
+import type { FeeLine, Organisation } from "@/types/onboarding.types";
 import { apiClient } from "@/lib/api/client";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
-const openSans = Open_Sans({ subsets: ["latin"] });
+const montserrat = Montserrat({ subsets: ["latin"] });
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -23,15 +23,15 @@ export default function OnboardingPage() {
     // Check if admin already has org
     const checkExistingOrg = async () => {
       try {
-        const { data } = await apiClient.get<{ success: boolean; data: any[] }>(
+        const { data } = await apiClient.get<{ success: boolean; data: Organisation[] }>(
           "/organisations/my-orgs"
         );
         if (data.data && data.data.length > 0) {
           // Already onboarded, redirect to dashboard
           router.push("/dashboard");
         }
-      } catch (err) {
-        
+      } catch {
+        // no existing org, stay on onboarding
       } finally {
         setIsLoading(false);
       }
@@ -48,7 +48,7 @@ export default function OnboardingPage() {
     );
   }
 
-  const handleStep1Next = (orgId: string, data: any) => {
+  const handleStep1Next = (orgId: string, data: Step1Data) => {
     state.setOrgDetails({
       orgId,
       orgName: data.name,
@@ -73,6 +73,12 @@ export default function OnboardingPage() {
     });
   };
 
+  const handleBack = () => {
+    if (state.step > 1) {
+      state.setStep((state.step - 1) as 1 | 2 | 3 | 4);
+    }
+  };
+
   const handleStep3Next = () => {
     if (state.structure === "VARIABLE" && state.orgId) {
       const fetchInviteCode = async () => {
@@ -82,7 +88,7 @@ export default function OnboardingPage() {
             data: { inviteCode: string };
           }>(`/organisations/${state.orgId}/invite-code`);
           state.setInviteCode(data.data.inviteCode);
-        } catch (err) {
+        } catch {
           console.error("Failed to fetch invite code");
           state.setStep(4);
         }
@@ -94,13 +100,20 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${openSans.className}`}>
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        <ProgressBar current={state.step} />
+    <div className={`min-h-screen bg-gray-50 ${montserrat.className}`}>
+      <header className="fixed top-0 left-0 right-0 z-10 bg-white border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-2.5">
+          
+          <span className="text-xl font-bold text-gray-900">PayFlow</span>
+        </div>
+      </header>
 
-        <div className="bg-white rounded-lg shadow p-8">
+      <div className="max-w-2xl mx-auto px-4 py-12">
+        <ProgressBar current={state.step} onBack={handleBack} />
+
+        <div className="bg-white rounded-2xl p-8">
           <h1 className="text-3xl font-bold mb-2">
-            {state.step === 1 && "Setup Your Organisation"}
+            {state.step === 1 && "Setup Your PayFlet"}
             {state.step === 2 && "Create Collection"}
             {state.step === 3 && "Add Members"}
             {state.step === 4 && "You're All Set!"}
@@ -108,7 +121,7 @@ export default function OnboardingPage() {
 
           <p className="text-gray-600 mb-8">
             {state.step === 1 &&
-              "Tell us about your organisation and verify your payout account."}
+              "Tell us about your this PayFlet(payment outlet) and verify your payout account."}
             {state.step === 2 &&
               `${state.structure === "FLAT" ? "Set a flat amount for all members" : "Create fee lines for variable amounts"}`}
             {state.step === 3 &&
