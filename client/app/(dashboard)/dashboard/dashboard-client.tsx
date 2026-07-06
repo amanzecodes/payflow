@@ -14,16 +14,27 @@ import {
 import { PiHandshake } from "react-icons/pi";
 import { useDashboardData } from "@/hooks/dashboard/use-dashboard";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
-import type { DashboardOverviewResponse } from "@/types/dashboard.type";
+import LiveDashboardListener from "@/components/LiveDashboardListener";
+import type {
+  PaymentReceivedEvent,
+  PaymentOverpaymentEvent,
+} from "@/types/socket.types";
 
-const getStats = (dashboard: DashboardOverviewResponse | undefined) => [
+interface DashboardStats {
+  totalCollected: number;
+  outstanding: number;
+  overdueCount: number;
+  availableBalance: number;
+}
+
+const getStats = ({ totalCollected, outstanding, overdueCount, availableBalance }: DashboardStats) => [
   {
     title: "Total Collected This Cycle",
     value: new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
-    }).format(dashboard?.data?.currentCycle?.totalCollected || 0),
+    }).format(totalCollected),
     description: "Sum of all payments landed so far",
     icon: HiOutlineBanknotes,
     accent: "text-[#0b79ff] bg-[#0b79ff]/10",
@@ -34,14 +45,14 @@ const getStats = (dashboard: DashboardOverviewResponse | undefined) => [
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
-    }).format(dashboard?.data?.currentCycle?.outstanding || 0),
+    }).format(outstanding),
     description: "Still unpaid this cycle",
     icon: HiOutlineClock,
     accent: "text-amber-600 bg-amber-50",
   },
   {
     title: "Overdue",
-    value: `${dashboard?.data?.currentCycle?.overdueCount || 0} Member${(dashboard?.data?.currentCycle?.overdueCount || 0) !== 1 ? "s" : ""}`,
+    value: `${overdueCount} Member${overdueCount !== 1 ? "s" : ""}`,
     description: "Missed the due date",
     icon: HiOutlineExclamationTriangle,
     accent: "text-rose-600 bg-rose-50",
@@ -52,12 +63,20 @@ const getStats = (dashboard: DashboardOverviewResponse | undefined) => [
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
-    }).format(dashboard?.data?.balance?.available || 0),
+    }).format(availableBalance),
     description: "Ready for withdrawal now",
     icon: HiOutlineWallet,
     accent: "text-emerald-600 bg-emerald-50",
   },
 ];
+
+interface LiveFeedItem {
+  id: string;
+  memberName: string;
+  amount: number;
+  createdAt: string;
+  isLive?: boolean;
+}
 
 type ChargeStatus = "PENDING" | "PAID" | "OVERDUE";
 
@@ -101,6 +120,11 @@ export default function DashboardClientPage() {
   const orgId = useOnboardingStore((state) => state.orgId);
   const hasHydrated = useOnboardingStore((state) => state._hasHydrated);
 
+  const [liveFeedItems, setLiveFeedItems] = useState<LiveFeedItem[]>([]);
+  const [statsOverride, setStatsOverride] = useState<{ totalCollected: number; outstanding: number } | null>(
+    null
+  );
+
   useEffect(() => {
     if (hasHydrated && !orgId) {
       router.push("/onboarding");
@@ -108,6 +132,54 @@ export default function DashboardClientPage() {
   }, [hasHydrated, orgId, router]);
 
   const { data: dashboard, isLoading } = useDashboardData(orgId!);
+
+  const pushLiveUpdate = (item: LiveFeedItem, amountCollected: number, amountOwed: number) => {
+    setLiveFeedItems((prev) => [item, ...prev]);
+    setStatsOverride((prev) => {
+      const base = prev ?? {
+        totalCollected: dashboard?.data?.currentCycle?.totalCollected || 0,
+        outstanding: dashboard?.data?.currentCycle?.outstanding || 0,
+      };
+      return {
+        totalCollected: base.totalCollected + amountCollected,
+        outstanding: Math.max(0, base.outstanding - amountOwed),
+      };
+    });
+
+    
+    setTimeout(() => {
+      setLiveFeedItems((current) => current.filter((entry) => entry.id !== item.id));
+      setStatsOverride(null);
+    }, 2500);
+  };
+
+  const handlePaymentReceived = (payment: PaymentReceivedEvent) => {
+    pushLiveUpdate(
+      {
+        id: payment.txRef,
+        memberName: payment.memberName,
+        amount: payment.amount,
+        createdAt: payment.paidAt,
+        isLive: true,
+      },
+      payment.amount,
+      payment.amount
+    );
+  };
+
+  const handlePaymentOverpaid = (event: PaymentOverpaymentEvent) => {
+    pushLiveUpdate(
+      {
+        id: `${event.identifier}-${event.timestamp}`,
+        memberName: event.memberName,
+        amount: event.received,
+        createdAt: event.timestamp,
+        isLive: true,
+      },
+      event.received,
+      event.expected
+    );
+  };
 
   if (isLoading) {
     return (
@@ -176,6 +248,23 @@ export default function DashboardClientPage() {
 
   const recentActivity = dashboard?.data?.recentActivity || [];
 
+  const feedItems: LiveFeedItem[] = [
+    ...liveFeedItems,
+    ...recentActivity.map((charge) => ({
+      id: charge.id,
+      memberName: charge.member?.name || "Unknown",
+      amount: charge.amount,
+      createdAt: charge.createdAt,
+    })),
+  ].slice(0, VISIBLE_COUNT);
+
+  const stats: DashboardStats = {
+    totalCollected: statsOverride?.totalCollected ?? dashboard?.data?.currentCycle?.totalCollected ?? 0,
+    outstanding: statsOverride?.outstanding ?? dashboard?.data?.currentCycle?.outstanding ?? 0,
+    overdueCount: dashboard?.data?.currentCycle?.overdueCount || 0,
+    availableBalance: dashboard?.data?.balance?.available || 0,
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -183,6 +272,15 @@ export default function DashboardClientPage() {
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="space-y-6"
     >
+      {orgId && (
+        <LiveDashboardListener
+          orgId={orgId}
+          onPaymentReceived={handlePaymentReceived}
+          onPaymentUnderpaid={() => {}}
+          onPaymentOverpaid={handlePaymentOverpaid}
+        />
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-zinc-200 pb-6">
         <div>
@@ -197,7 +295,7 @@ export default function DashboardClientPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {getStats(dashboard).map((stat, i) => {
+        {getStats(stats).map((stat, i) => {
           const Icon = stat.icon;
           return (
             <motion.div
@@ -230,11 +328,17 @@ export default function DashboardClientPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-6 rounded-xl bg-white">
-        <button className="flex-1 inline-flex cursor-pointer items-center justify-center gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-lg py-3.5 transition-colors shadow-sm">
+        <button
+          onClick={() => router.push("/payout")}
+          className="flex-1 inline-flex cursor-pointer items-center justify-center gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-lg py-3.5 transition-colors shadow-sm"
+        >
           <HiOutlineWallet size={18} />
           Request Payout
         </button>
-        <button className="flex-1 inline-flex cursor-pointer items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold rounded-lg py-3.5 transition-colors shadow-sm">
+        <button
+          onClick={() => router.push("/members?action=add")}
+          className="flex-1 inline-flex cursor-pointer items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold rounded-lg py-3.5 transition-colors shadow-sm"
+        >
           <PiHandshake size={18} />
           Add Member
         </button>
@@ -327,15 +431,18 @@ export default function DashboardClientPage() {
           </div>
 
           <div className="divide-y divide-zinc-100">
-            {recentActivity.length > 0 ? (
-              recentActivity.slice(0, VISIBLE_COUNT).map((charge) => (
-                <div
-                  key={charge.id}
-                  className="flex items-center justify-between min-h-14"
+            {feedItems.length > 0 ? (
+              feedItems.map((item) => (
+                <motion.div
+                  key={item.id}
+                  initial={item.isLive ? { backgroundColor: "rgba(16,185,129,0.18)" } : false}
+                  animate={{ backgroundColor: "rgba(16,185,129,0)" }}
+                  transition={{ duration: 1.6, ease: "easeOut" }}
+                  className="flex items-center justify-between min-h-14 rounded-lg px-2 -mx-2"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <p className="text-sm font-semibold text-zinc-900 truncate">
-                      {charge.member?.name || "Unknown"}
+                      {item.memberName}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 shrink-0 text-right">
@@ -344,13 +451,13 @@ export default function DashboardClientPage() {
                         style: "currency",
                         currency: "NGN",
                         minimumFractionDigits: 0,
-                      }).format(charge.amount)}
+                      }).format(item.amount)}
                     </span>
                     <span className="text-xs text-zinc-400 w-20">
-                      {formatTimeAgo(charge.createdAt)}
+                      {item.isLive ? "Just now" : formatTimeAgo(item.createdAt)}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : (
               <div className="text-center py-12">
