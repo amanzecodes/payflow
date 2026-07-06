@@ -84,3 +84,11 @@ enum WebhookReconciliationStatus {
   PAYOUT_SUCCESS
   PAYOUT_REFUNDED
 }
+
+enum PayoutType {
+  WITHDRAWAL
+  AIRTIME
+  DATA
+  ELECTRICITY
+  CABLETV
+}

@@ -9,6 +9,7 @@ import collectionRoutes from './collection.route'
 import whatsappRoutes from './whatsapp.route'
 import banksRoutes from './banks.route'
 import feeLineRoutes from './feeline.route'
+import billsRoutes from './bills.route'
 
 const router = Router()
 
@@ -16,6 +17,7 @@ router.use('/auth', authRoutes)
 router.use('/organisations', organisationRoutes)
 router.use('/organisations/:orgId/members', memberRoutes)
 router.use('/organisations/:orgId/payouts', payoutRoutes)
+router.use('/organisations/:orgId/bills', billsRoutes)
 router.use('/webhooks', webhookRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/organisations/:orgId/collections', collectionRoutes)

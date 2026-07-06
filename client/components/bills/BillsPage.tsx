@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 import PayBillCard from "./PayBillCard";
 import RecentPurchases from "./RecentPurchases";
-import { DUMMY_PURCHASES, WALLET_BALANCE } from "./data";
+import { DUMMY_PURCHASES } from "./data";
 import type { BillPurchase } from "./types";
+import { usePayoutPage } from "@/hooks/payouts/use-payout-page";
+import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const BillsPage = () => {
+  const router = useRouter();
+  const orgId = useOnboardingStore((state) => state.orgId);
+  const hasHydrated = useOnboardingStore((state) => state._hasHydrated);
+
+  useEffect(() => {
+    if (hasHydrated && !orgId) {
+      router.push("/onboarding");
+    }
+  }, [hasHydrated, orgId, router]);
+
+  const { data: payoutData } = usePayoutPage(orgId!);
+
   const [purchases, setPurchases] = useState<BillPurchase[]>(DUMMY_PURCHASES);
+  const [balanceAdjustment, setBalanceAdjustment] = useState(0);
+
+  const walletBalance = Math.max((payoutData?.balance?.available ?? 0) + balanceAdjustment, 0);
 
   const handlePurchase = (purchase: BillPurchase) => {
     setPurchases((prev) => [purchase, ...prev]);
+  };
+
+  const handleBalanceChange = (delta: number) => {
+    setBalanceAdjustment((prev) => prev + delta);
   };
 
   return (
@@ -29,7 +51,12 @@ const BillsPage = () => {
         </p>
       </div>
 
-      <PayBillCard walletBalance={WALLET_BALANCE} onPurchase={handlePurchase} />
+      <PayBillCard
+        walletBalance={walletBalance}
+        orgId={orgId}
+        onPurchase={handlePurchase}
+        onBalanceChange={handleBalanceChange}
+      />
 
       <RecentPurchases purchases={purchases} />
     </motion.div>

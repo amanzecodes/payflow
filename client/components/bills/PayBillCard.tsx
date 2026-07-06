@@ -6,12 +6,18 @@ import { toast } from "sonner";
 import { HiOutlineCheckCircle } from "react-icons/hi2";
 
 import { CustomSelect } from "@/components/onboarding/CustomSelect";
+import { useVendAirtime } from "@/hooks/bills/use-bills";
+import { getApiErrorMessage } from "@/lib/api/error";
+import type { AirtimeNetwork, VendAirtimeData } from "@/types/bills.types";
 import { DATA_PLANS, DISTRIBUTORS, METER_TYPES, NETWORKS, formatNaira } from "./data";
 import type { BillPurchase, BillTab } from "./types";
+import AirtimeSuccessModal from "./AirtimeSuccessModal";
 
 interface PayBillCardProps {
   walletBalance: number;
+  orgId?: string;
   onPurchase: (purchase: BillPurchase) => void;
+  onBalanceChange: (delta: number) => void;
 }
 
 const TABS: { label: string; value: BillTab }[] = [
@@ -23,7 +29,16 @@ const TABS: { label: string; value: BillTab }[] = [
 const MIN_AMOUNT = 50;
 const MAX_AMOUNT = 50000;
 
-const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
+const PHONE_REGEX = /^(\+234|0)[0-9]{10}$/;
+
+const NETWORK_API_CODE: Record<string, AirtimeNetwork> = {
+  MTN: "MTN",
+  AIRTEL: "AIRTEL",
+  GLO: "GLO",
+  NINEMOBILE: "9MOBILE",
+};
+
+const PayBillCard = ({ walletBalance, orgId, onPurchase, onBalanceChange }: PayBillCardProps) => {
   const [activeTab, setActiveTab] = useState<BillTab>("AIRTIME");
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,13 +54,34 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
   const [verifying, setVerifying] = useState(false);
   const [verifiedName, setVerifiedName] = useState("");
 
+  const [airtimeError, setAirtimeError] = useState("");
+  const [airtimeSuccess, setAirtimeSuccess] = useState<VendAirtimeData | null>(null);
+  const vendAirtimeMutation = useVendAirtime(orgId ?? "");
+
   const plans = DATA_PLANS[network] ?? [];
   const selectedPlan = plans.find((plan) => plan.value === dataPlanId);
   const amountValue = Number(amount);
 
+  const isPhoneValid = PHONE_REGEX.test(phone);
+  const phoneError = phone.length > 0 && !isPhoneValid ? "Enter a valid Nigerian phone number" : "";
+
+  const isAmountInRange = amountValue >= MIN_AMOUNT && amountValue <= MAX_AMOUNT;
+  const amountError =
+    amount.length > 0 && !isAmountInRange
+      ? `Amount must be between ${formatNaira(MIN_AMOUNT)} and ${formatNaira(MAX_AMOUNT)}`
+      : amount.length > 0 && isAmountInRange && amountValue > walletBalance
+      ? "Amount exceeds available balance"
+      : "";
+
   const resetSharedFields = () => {
     setPhone("");
     setAmount("");
+  };
+
+  const resetAirtimeForm = () => {
+    resetSharedFields();
+    setNetwork("MTN");
+    setAirtimeSuccess(null);
   };
 
   const switchTab = (tab: BillTab) => {
@@ -69,28 +105,51 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
     }, 900);
   };
 
-  const canBuyAirtime = network && phone.length >= 10 && amountValue >= MIN_AMOUNT && amountValue <= MAX_AMOUNT && amountValue <= walletBalance;
+  const canBuyAirtime =
+    Boolean(network) && isPhoneValid && isAmountInRange && amountValue <= walletBalance && Boolean(orgId);
   const canBuyData = network && phone.length >= 10 && Boolean(selectedPlan) && (selectedPlan?.amount ?? 0) <= walletBalance;
   const canBuyElectricity =
     distributor && meterType && meterNumber.length >= 10 && phone.length >= 10 && amountValue >= MIN_AMOUNT && amountValue <= walletBalance;
 
-  const handleBuy = async () => {
+  const handleBuyAirtime = async () => {
+    setAirtimeError("");
     setSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 900));
 
-    if (activeTab === "AIRTIME") {
+    try {
+      const data = await vendAirtimeMutation.mutateAsync({
+        phoneNumber: phone,
+        network: NETWORK_API_CODE[network] ?? (network as AirtimeNetwork),
+        amount: amountValue,
+      });
+
       onPurchase({
         id: `bill_${Date.now()}`,
         type: "AIRTIME",
         provider: network,
-        identifier: phone,
-        amount: amountValue,
+        identifier: data.phoneNumber,
+        amount: data.amount,
         status: "SUCCESS",
         createdAt: new Date().toISOString(),
       });
-      toast.success(`${formatNaira(amountValue)} airtime sent to ${phone}`);
-      resetSharedFields();
-    } else if (activeTab === "DATA" && selectedPlan) {
+      onBalanceChange(-data.amount);
+      setAirtimeSuccess(data);
+    } catch (error) {
+      setAirtimeError(getApiErrorMessage(error, "Failed to purchase airtime"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBuy = async () => {
+    if (activeTab === "AIRTIME") {
+      await handleBuyAirtime();
+      return;
+    }
+
+    setSubmitting(true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    if (activeTab === "DATA" && selectedPlan) {
       onPurchase({
         id: `bill_${Date.now()}`,
         type: "DATA",
@@ -183,6 +242,7 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
                   placeholder="0801 234 5678"
                   className="w-full px-4 py-2.5 rounded-lg bg-white border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[#0b79ff]/40 focus:ring-2 focus:ring-[#0b79ff]/10 transition-all"
                 />
+                {phoneError && <p className="text-xs text-red-600 mt-1.5">{phoneError}</p>}
               </div>
             </div>
 
@@ -199,7 +259,11 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
                   className="w-full pl-8 pr-4 py-2.5 rounded-lg bg-white border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[#0b79ff]/40 focus:ring-2 focus:ring-[#0b79ff]/10 transition-all"
                 />
               </div>
-              <p className="text-xs text-zinc-400 mt-2">Minimum ₦50, maximum ₦50,000.</p>
+              {amountError ? (
+                <p className="text-xs text-red-600 mt-2">{amountError}</p>
+              ) : (
+                <p className="text-xs text-zinc-400 mt-2">Minimum ₦50, maximum ₦50,000.</p>
+              )}
             </div>
           </>
         )}
@@ -333,9 +397,23 @@ const PayBillCard = ({ walletBalance, onPurchase }: PayBillCardProps) => {
           disabled={isDisabled}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-lg px-6 py-3.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
+          {submitting && activeTab === "AIRTIME" && (
+            <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          )}
           {buttonLabel}
         </button>
+
+        {activeTab === "AIRTIME" && airtimeError && <p className="text-sm text-red-600">{airtimeError}</p>}
       </div>
+
+      <AirtimeSuccessModal
+        open={Boolean(airtimeSuccess)}
+        amount={airtimeSuccess?.amount ?? 0}
+        network={airtimeSuccess?.network ?? network}
+        phoneNumber={airtimeSuccess?.phoneNumber ?? phone}
+        reference={airtimeSuccess?.reference ?? ""}
+        onDone={resetAirtimeForm}
+      />
     </div>
   );
 };

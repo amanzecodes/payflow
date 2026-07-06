@@ -49,6 +49,8 @@ export interface NombaTransaction {
   cardBank?: string
 }
 
+type NombaNetwork = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE'
+
 export interface NombaCustomer {
   bankCode?: string
   senderName?: string
@@ -74,6 +76,8 @@ export interface NombaWebhookPayload {
     customer: NombaCustomer
   }
 }
+
+
 
 export interface PaymentProvider {
   createVirtualAccount(
@@ -102,6 +106,12 @@ export interface PaymentProvider {
     senderName: string,
     originalTxRef: string
   ): Promise<TransferResult>
+
+  vendAirtime(
+  phoneNumber: string,
+  network: NombaNetwork,
+  amount: number
+): Promise<{ merchantTxRef: string; rrn: string; status: string }>
 
   verifyWebhookSignature(
     headers: Record<string, string>,

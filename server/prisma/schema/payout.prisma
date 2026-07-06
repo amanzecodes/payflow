@@ -1,12 +1,14 @@
 model Payout {
   id            String        @id @default(cuid())
   orgId         String
+  type          PayoutType    @default(WITHDRAWAL)
   amount        Float
   status        PayoutStatus  @default(PENDING)
+  metadata      Json?
   transferRef   String?
-  bankAccount   String
-  bankCode      String
-  bankName      String
+  bankAccount   String?
+  bankCode      String?
+  bankName      String?
   createdAt     DateTime      @default(now())
   completedAt   DateTime?
 
