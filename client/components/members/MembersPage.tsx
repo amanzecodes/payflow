@@ -1,32 +1,63 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { PiHandshake } from "react-icons/pi";
 import FilterBar from "./FilterBar";
 import MembersTable from "./MembersTable";
 import MemberDetailPanel from "./MemberDetailPanel";
 import AddMemberPanel from "./AddMemberPanel";
-import type { Member, StatusFilter } from "./types";
+import type { StatusFilter } from "./types";
 import type { MemberWithChargeStatus } from "@/lib/api/member.api";
 import { useMembers } from "@/hooks/members/use-member";
+import { useOrganisation, useCollections } from "@/hooks/members/use-organisation-setup";
 import { useOnboardingStore } from "@/lib/store/onboarding.store";
 
 const MembersPage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const orgId = useOnboardingStore((state) => state.orgId);
   const hasHydrated = useOnboardingStore((state) => state._hasHydrated);
   const { data: fetchedMembers = [], isLoading, error } = useMembers(orgId || "");
+
+  const orgQuery = useOrganisation(orgId);
+  const collectionsQuery = useCollections(orgId);
+  const org = orgQuery.data;
+  const expectedAmount = collectionsQuery.data?.[0]?.amount ?? 0;
+  const setupLoading = orgQuery.isLoading || collectionsQuery.isLoading;
+  const setupError = orgQuery.isError || collectionsQuery.isError;
+  const canAddMember = !!org && (org.structure !== "FLAT" || expectedAmount > 0);
+
+  const handleRetrySetup = () => {
+    orgQuery.refetch();
+    collectionsQuery.refetch();
+  };
+
+  const handleMemberCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ["members", orgId] });
+  };
 
   const [members, setMembers] = useState<MemberWithChargeStatus[]>([]);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("All");
   const [selectedMember, setSelectedMember] = useState<MemberWithChargeStatus | null>(null);
-  const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
+  
+  const [isAddPanelOpen, setIsAddPanelOpen] = useState(() => searchParams.get("action") === "add");
 
   useEffect(() => {
-    if (fetchedMembers.length > 0) {
-      setMembers(fetchedMembers);
+    if (searchParams.get("action") === "add") {
+      router.replace("/members", { scroll: false });
     }
-  }, [fetchedMembers]);
+  }, [searchParams, router]);
+
+
+  const [syncedMembers, setSyncedMembers] = useState<MemberWithChargeStatus[] | undefined>();
+  if (fetchedMembers.length > 0 && fetchedMembers !== syncedMembers) {
+    setSyncedMembers(fetchedMembers);
+    setMembers(fetchedMembers);
+  }
 
   const filteredMembers = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -69,10 +100,6 @@ const MembersPage = () => {
   const handleDeactivate = (memberId: string) => {
     setMembers((prev) => prev.filter((member) => member.id !== memberId));
     setSelectedMember(null);
-  };
-
-  const handleCreate = (member: MemberWithChargeStatus) => {
-    setMembers((prev) => [member, ...prev]);
   };
 
   if (!hasHydrated || isLoading) {
@@ -151,13 +178,29 @@ const MembersPage = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsAddPanelOpen(true)}
-          className="inline-flex items-center justify-center cursor-pointer gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-sm px-5 py-3 transition-colors shadow-sm self-start sm:self-auto"
-        >
-          <PiHandshake size={18} />
-          Add Member
-        </button>
+        <div className="flex flex-col items-end gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setIsAddPanelOpen(true)}
+            disabled={setupLoading || setupError || !canAddMember}
+            title={
+              !setupLoading && !setupError && !canAddMember
+                ? "Set up a collection amount before adding members"
+                : undefined
+            }
+            className="inline-flex items-center justify-center cursor-pointer gap-2 bg-[#0b79ff] hover:bg-[#0066de] text-white text-sm font-semibold rounded-sm px-5 py-3 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <PiHandshake size={18} />
+            Add Member
+          </button>
+          {setupError && (
+            <button
+              onClick={handleRetrySetup}
+              className="text-xs font-medium text-rose-600 hover:text-rose-700 underline underline-offset-2"
+            >
+              Couldn&apos;t load setup — Retry
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Workspace */}
@@ -179,11 +222,18 @@ const MembersPage = () => {
         onDeactivate={handleDeactivate}
       />
 
-      <AddMemberPanel
-        open={isAddPanelOpen}
-        onClose={() => setIsAddPanelOpen(false)}
-        onCreate={handleCreate}
-      />
+      {org && (
+        <AddMemberPanel
+          open={isAddPanelOpen}
+          onClose={() => setIsAddPanelOpen(false)}
+          orgId={orgId || ""}
+          orgType={org.type}
+          structure={org.structure}
+          expectedAmount={expectedAmount}
+          inviteCode={org.inviteCode}
+          onMemberCreated={handleMemberCreated}
+        />
+      )}
     </div>
   );
 };

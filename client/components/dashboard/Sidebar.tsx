@@ -10,7 +10,8 @@ import {
   HiOutlineBars3,
   HiOutlineXMark,
   HiChevronUpDown,
-  HiOutlineCheck,  
+  HiOutlineCheck,
+  HiOutlineCog6Tooth,  
 } from "react-icons/hi2";
 import { SlHome } from "react-icons/sl";
 import { HiOutlineBolt } from "react-icons/hi2";
@@ -31,7 +32,7 @@ const NAVIGATION_ITEMS = [
   { name: "Transactions", href: "/transactions", icon: IoReceiptOutline },
   { name: "Bills", href: "/bills", icon: HiOutlineBolt },
   { name: "Payouts", href: "/payout", icon: HiOutlineBanknotes },
-  // { name: "Settings", href: "/settings", icon: HiOutlineCog6Tooth },
+  { name: "Settings", href: "/settings", icon: HiOutlineCog6Tooth },
 ];
 
 const Sidebar = ({ children }: SidebarProps) => {
