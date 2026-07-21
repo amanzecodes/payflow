@@ -1,3 +1,5 @@
+Apparently I got disqualified because I submitted a form that was requred to move on and they didn't see the submission
+
 # PayFlow
 
 > **Give every member their own dedicated payment account. Every transfer reconciles itself.**
